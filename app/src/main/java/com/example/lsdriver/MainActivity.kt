@@ -22,6 +22,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -210,8 +211,8 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .height(42.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                    .height(48.dp)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(
@@ -222,14 +223,15 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
                         text = "Apeiron",
                         fontFamily = FontFamily.SansSerif,
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 16.sp,
+                        fontSize = 17.sp,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
@@ -245,9 +247,13 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
         bottomBar = {
             // TAB ROW PLACED AT THE BOTTOM OF SCREEN WITH BACKSTACK MEMORY INTEGRATION!
             Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                tonalElevation = 8.dp,
-                modifier = Modifier.navigationBarsPadding()
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                tonalElevation = 6.dp,
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .border(
+                        BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                    )
             ) {
                 TabRow(
                     selectedTabIndex = selectedTab,
@@ -1542,9 +1548,15 @@ fun ExpandableCard(
 ) {
     var expanded by remember { mutableStateOf(initialExpanded) }
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)),
-        shape = RoundedCornerShape(16.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                RoundedCornerShape(18.dp)
+            ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+        shape = RoundedCornerShape(18.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

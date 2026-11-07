@@ -479,10 +479,17 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                 val dismissWithAnimation: () -> Unit = {
                     mainHandler.removeCallbacksAndMessages(null)
                     coroutineScope.launch {
-                        dragOffsetY.animateTo(
-                            targetValue = popupHeight * density * 1.2f,
-                            animationSpec = tween(durationMillis = 180, easing = LinearOutSlowInEasing)
-                        )
+                        if (isLandscape) {
+                            dragOffsetX.animateTo(
+                                targetValue = -popupHeight * density * 1.2f,
+                                animationSpec = tween(durationMillis = 200, easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f))
+                            )
+                        } else {
+                            dragOffsetY.animateTo(
+                                targetValue = popupHeight * density * 1.2f,
+                                animationSpec = tween(durationMillis = 200, easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f))
+                            )
+                        }
                         releasePlayer()
                         removeOverlay()
                     }
@@ -570,8 +577,10 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                     visible = true
                 }
 
-                val easeOutSmooth = CubicBezierEasing(0.18f, 0.85f, 0.25f, 1.0f)
-                val cardShape = if (isLandscape) RoundedCornerShape(16.dp) else RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                // Material Motion Curves (Emphasized Decelerate / Accelerate)
+                val emphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+                val emphasizedAccelerate = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
+                val cardShape = if (isLandscape) RoundedCornerShape(20.dp) else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
 
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -582,23 +591,24 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                         enter = if (isLandscape) {
                             slideInHorizontally(
                                 initialOffsetX = { -it },
-                                animationSpec = tween(durationMillis = 600, easing = easeOutSmooth)
-                            ) + fadeIn(animationSpec = tween(durationMillis = 400, easing = easeOutSmooth))
+                                animationSpec = tween(durationMillis = 480, easing = emphasizedDecelerate)
+                            ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
                         } else {
                             slideInVertically(
                                 initialOffsetY = { it },
-                                animationSpec = tween(durationMillis = 600, easing = easeOutSmooth)
-                            ) + fadeIn(animationSpec = tween(durationMillis = 400, easing = easeOutSmooth))
+                                animationSpec = tween(durationMillis = 500, easing = emphasizedDecelerate)
+                            ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
                         },
-                        exit = fadeOut(animationSpec = tween(durationMillis = 150))
+                        exit = fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutLinearInEasing))
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(popupHeight.dp)
-                                .offset {
-                                    if (isLandscape) IntOffset(dragOffsetX.value.roundToInt(), 0)
-                                    else IntOffset(0, dragOffsetY.value.roundToInt())
+                                .graphicsLayer {
+                                    translationX = dragOffsetX.value
+                                    translationY = dragOffsetY.value
+                                    clip = false
                                 }
                                 .pointerInput(Unit) {
                                     if (isLandscape) {
@@ -613,13 +623,19 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                 if (currentOffset < -100f || currentVelocity < -350f) {
                                                     mainHandler.removeCallbacks(dismissRunnable)
                                                     coroutineScope.launch {
-                                                        dragOffsetX.animateTo(-popupHeight * density, tween(180))
+                                                        dragOffsetX.animateTo(-popupHeight * density, tween(200, easing = emphasizedAccelerate))
                                                         releasePlayer()
                                                         removeOverlay()
                                                     }
                                                 } else {
                                                     coroutineScope.launch {
-                                                        dragOffsetX.animateTo(0f, spring(stiffness = Spring.StiffnessHigh))
+                                                        dragOffsetX.animateTo(
+                                                            0f,
+                                                            spring(
+                                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                                stiffness = Spring.StiffnessMediumLow
+                                                            )
+                                                        )
                                                     }
                                                 }
                                             },
@@ -647,14 +663,20 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                     coroutineScope.launch {
                                                         dragOffsetY.animateTo(
                                                             targetValue = popupHeight * density * 1.2f,
-                                                            animationSpec = tween(durationMillis = 180, easing = LinearOutSlowInEasing)
+                                                            animationSpec = tween(durationMillis = 200, easing = emphasizedAccelerate)
                                                         )
                                                         releasePlayer()
                                                         removeOverlay()
                                                     }
                                                 } else {
                                                     coroutineScope.launch {
-                                                        dragOffsetY.animateTo(0f, spring(stiffness = Spring.StiffnessHigh))
+                                                        dragOffsetY.animateTo(
+                                                            0f,
+                                                            spring(
+                                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                                stiffness = Spring.StiffnessMediumLow
+                                                            )
+                                                        )
                                                     }
                                                 }
                                             },
@@ -669,7 +691,17 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                     }
                                 }
                                 .clip(cardShape)
-                                .graphicsLayer { clip = true }
+                                .border(
+                                    width = 1.dp,
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.White.copy(alpha = 0.22f),
+                                            Color.White.copy(alpha = 0.05f),
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    shape = cardShape
+                                )
                                 .background(
                                     Brush.verticalGradient(colors = listOf(bgColor1, bgColor2))
                                 )
@@ -683,10 +715,23 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                             ) {
                                 Text(
                                     text = "Apeiron",
-                                    color = bgColor2,
+                                    color = Color.White.copy(alpha = 0.08f),
                                     fontSize = 11.sp,
                                     fontFamily = FontFamily.SansSerif,
-                                    fontWeight = FontWeight.Normal
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+
+                            // Layer 0.5: Top Drag Handle Pill
+                            if (!isLandscape) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .padding(top = 8.dp)
+                                        .width(36.dp)
+                                        .height(4.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.32f))
                                 )
                             }
 
@@ -797,37 +842,40 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                             // Foreground Content - Appears at 3/4 Video Time or on Tap!
                             AnimatedVisibility(
                                 visible = showUi,
-                                enter = fadeIn(animationSpec = tween(300, easing = easeOutSmooth)) +
-                                        slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(300, easing = easeOutSmooth)),
-                                exit = fadeOut(animationSpec = tween(200)),
+                                enter = fadeIn(animationSpec = tween(350, easing = LinearOutSlowInEasing)) +
+                                        slideInVertically(
+                                            initialOffsetY = { (it * 0.35f).toInt() },
+                                            animationSpec = tween(350, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
+                                        ),
+                                exit = fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing)),
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 32.dp),
+                                        .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 28.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Bottom
                                 ) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(32.dp),
+                                        verticalArrangement = Arrangement.spacedBy(24.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Text(
                                             text = if (isEnglish) "Connected $deviceName" else "Đã kết nối $deviceName",
                                             color = textColor,
-                                            fontSize = 22.sp,
+                                            fontSize = 21.sp,
                                             fontFamily = FontFamily.SansSerif,
                                             fontWeight = FontWeight.Bold,
                                             textAlign = TextAlign.Center,
-                                            letterSpacing = 0.4.sp,
+                                            letterSpacing = 0.3.sp,
                                             softWrap = false
                                         )
 
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                                         ) {
                                             Button(
                                                 onClick = {
@@ -840,16 +888,17 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                 },
                                                 modifier = Modifier
                                                     .weight(1f)
-                                                    .height(48.dp),
+                                                    .height(50.dp)
+                                                    .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(25.dp)),
                                                 colors = ButtonDefaults.buttonColors(
                                                     containerColor = buttonBg
                                                 ),
-                                                shape = RoundedCornerShape(24.dp)
+                                                shape = RoundedCornerShape(25.dp)
                                             ) {
                                                 Text(
                                                     text = if (isEnglish) "Settings" else "Cài đặt",
                                                     color = textColor,
-                                                    fontSize = 18.sp,
+                                                    fontSize = 17.sp,
                                                     fontFamily = FontFamily.SansSerif,
                                                     fontWeight = FontWeight.SemiBold,
                                                     softWrap = false
@@ -863,16 +912,16 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                 },
                                                 modifier = Modifier
                                                     .weight(1f)
-                                                    .height(48.dp),
+                                                    .height(50.dp),
                                                 colors = ButtonDefaults.buttonColors(
                                                     containerColor = accentColor
                                                 ),
-                                                shape = RoundedCornerShape(24.dp)
+                                                shape = RoundedCornerShape(25.dp)
                                             ) {
                                                 Text(
                                                     text = if (isEnglish) "Done" else "Xong",
                                                     color = Color.White,
-                                                    fontSize = 18.sp,
+                                                    fontSize = 17.sp,
                                                     fontFamily = FontFamily.SansSerif,
                                                     fontWeight = FontWeight.Bold,
                                                     softWrap = false

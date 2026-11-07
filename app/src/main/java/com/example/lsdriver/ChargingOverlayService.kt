@@ -429,10 +429,17 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                 val dismissWithAnimation: () -> Unit = {
                     handler.removeCallbacksAndMessages(null)
                     coroutineScope.launch {
-                        dragOffsetY.animateTo(
-                            targetValue = popupHeight * density * 1.2f,
-                            animationSpec = tween(durationMillis = 180, easing = LinearOutSlowInEasing)
-                        )
+                        if (isLandscape) {
+                            dragOffsetX.animateTo(
+                                targetValue = -popupHeight * density * 1.2f,
+                                animationSpec = tween(durationMillis = 200, easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f))
+                            )
+                        } else {
+                            dragOffsetY.animateTo(
+                                targetValue = popupHeight * density * 1.2f,
+                                animationSpec = tween(durationMillis = 200, easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f))
+                            )
+                        }
                         try {
                             exoPlayer?.stop()
                             exoPlayer?.release()
@@ -508,8 +515,10 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                     visible = true
                 }
 
-                val easeOutSmooth = CubicBezierEasing(0.18f, 0.85f, 0.25f, 1.0f)
-                val cardShape = if (isLandscape) RoundedCornerShape(16.dp) else RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                // Material Motion Curves (Emphasized Decelerate / Accelerate)
+                val emphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+                val emphasizedAccelerate = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
+                val cardShape = if (isLandscape) RoundedCornerShape(20.dp) else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
 
                 Box(
                     modifier = Modifier
@@ -522,23 +531,24 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                         enter = if (isLandscape) {
                             slideInHorizontally(
                                 initialOffsetX = { -it },
-                                animationSpec = tween(durationMillis = 600, easing = easeOutSmooth)
-                            ) + fadeIn(animationSpec = tween(durationMillis = 400, easing = easeOutSmooth))
+                                animationSpec = tween(durationMillis = 480, easing = emphasizedDecelerate)
+                            ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
                         } else {
                             slideInVertically(
                                 initialOffsetY = { it },
-                                animationSpec = tween(durationMillis = 600, easing = easeOutSmooth)
-                            ) + fadeIn(animationSpec = tween(durationMillis = 400, easing = easeOutSmooth))
+                                animationSpec = tween(durationMillis = 500, easing = emphasizedDecelerate)
+                            ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
                         },
-                        exit = fadeOut(animationSpec = tween(durationMillis = 150))
+                        exit = fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutLinearInEasing))
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(popupHeight.dp)
-                                .offset {
-                                    if (isLandscape) IntOffset(dragOffsetX.value.roundToInt(), 0)
-                                    else IntOffset(0, dragOffsetY.value.roundToInt())
+                                .graphicsLayer {
+                                    translationX = dragOffsetX.value
+                                    translationY = dragOffsetY.value
+                                    clip = false
                                 }
                                 .pointerInput(Unit) {
                                     if (isLandscape) {
@@ -553,7 +563,7 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                 if (currentOffset < -100f || currentVelocity < -350f) {
                                                     handler.removeCallbacks(dismissRunnable)
                                                     coroutineScope.launch {
-                                                        dragOffsetX.animateTo(-popupHeight * density, tween(180))
+                                                        dragOffsetX.animateTo(-popupHeight * density, tween(200, easing = emphasizedAccelerate))
                                                         try {
                                                             exoPlayer?.stop()
                                                             exoPlayer?.release()
@@ -562,7 +572,13 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                     }
                                                 } else {
                                                     coroutineScope.launch {
-                                                        dragOffsetX.animateTo(0f, spring(stiffness = Spring.StiffnessHigh))
+                                                        dragOffsetX.animateTo(
+                                                            0f,
+                                                            spring(
+                                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                                stiffness = Spring.StiffnessMediumLow
+                                                            )
+                                                        )
                                                     }
                                                 }
                                             },
@@ -590,7 +606,7 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                     coroutineScope.launch {
                                                         dragOffsetY.animateTo(
                                                             targetValue = popupHeight * density * 1.2f,
-                                                            animationSpec = tween(durationMillis = 180, easing = LinearOutSlowInEasing)
+                                                            animationSpec = tween(durationMillis = 200, easing = emphasizedAccelerate)
                                                         )
                                                         try {
                                                             exoPlayer?.stop()
@@ -600,7 +616,13 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                     }
                                                 } else {
                                                     coroutineScope.launch {
-                                                        dragOffsetY.animateTo(0f, spring(stiffness = Spring.StiffnessHigh))
+                                                        dragOffsetY.animateTo(
+                                                            0f,
+                                                            spring(
+                                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                                stiffness = Spring.StiffnessMediumLow
+                                                            )
+                                                        )
                                                     }
                                                 }
                                             },
@@ -615,7 +637,17 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                     }
                                 }
                                 .clip(cardShape)
-                                .graphicsLayer { clip = true }
+                                .border(
+                                    width = 1.dp,
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.White.copy(alpha = 0.22f),
+                                            Color.White.copy(alpha = 0.05f),
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    shape = cardShape
+                                )
                                 .background(
                                     Brush.verticalGradient(
                                         colors = listOf(bgColor1, bgColor2)
@@ -631,10 +663,23 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                             ) {
                                 Text(
                                     text = "Apeiron",
-                                    color = bgColor2,
+                                    color = Color.White.copy(alpha = 0.08f),
                                     fontSize = 11.sp,
                                     fontFamily = FontFamily.SansSerif,
-                                    fontWeight = FontWeight.Normal
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+
+                            // Layer 0.5: Top Drag Handle Pill
+                            if (!isLandscape) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .padding(top = 8.dp)
+                                        .width(36.dp)
+                                        .height(4.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.32f))
                                 )
                             }
 
@@ -828,11 +873,12 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                             },
                                             modifier = Modifier
                                                 .weight(1f)
-                                                .height(48.dp),
+                                                .height(50.dp)
+                                                .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(25.dp)),
                                             colors = ButtonDefaults.buttonColors(
                                                 containerColor = buttonBg
                                             ),
-                                            shape = RoundedCornerShape(24.dp)
+                                            shape = RoundedCornerShape(25.dp)
                                         ) {
                                             Text(
                                                 text = if (isEnglish) "Settings" else "Cài đặt",
@@ -851,11 +897,11 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                             },
                                             modifier = Modifier
                                                 .weight(1f)
-                                                .height(48.dp),
+                                                .height(50.dp),
                                             colors = ButtonDefaults.buttonColors(
                                                 containerColor = accentColor
                                             ),
-                                            shape = RoundedCornerShape(24.dp)
+                                            shape = RoundedCornerShape(25.dp)
                                         ) {
                                             Text(
                                                 text = if (isEnglish) "Done" else "Xong",
