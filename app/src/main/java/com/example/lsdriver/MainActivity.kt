@@ -65,6 +65,9 @@ import com.example.lsdriver.ui.theme.SPoPDriverTheme
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @androidx.annotation.OptIn(UnstableApi::class)
 class MainActivity : ComponentActivity() {
@@ -466,6 +469,7 @@ fun PopupMediaTab(
     var isPlaying by remember { mutableStateOf(false) }
 
     var exoPlayerInstance by remember { mutableStateOf<ExoPlayer?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -484,17 +488,21 @@ fun PopupMediaTab(
             stagedType = if (isVideo) "video" else "image"
 
             val fileName = if (isVideo) "headset_media_file.mp4" else "headset_media_file.jpg"
-            val localFile = copyUriToInternalStorage(context, sourceUri, fileName)
-            val uriString = if (localFile != null) {
-                Uri.fromFile(localFile).toString()
-            } else {
-                sourceUri.toString()
+            coroutineScope.launch(Dispatchers.IO) {
+                val localFile = copyUriToInternalStorage(context, sourceUri, fileName)
+                val uriString = if (localFile != null) {
+                    Uri.fromFile(localFile).toString()
+                } else {
+                    sourceUri.toString()
+                }
+                withContext(Dispatchers.Main) {
+                    stagedUri = uriString
+                    stagedZoom = 1.0f
+                    stagedOffsetX = 0f
+                    stagedOffsetY = 0f
+                    isPlaying = false
+                }
             }
-            stagedUri = uriString
-            stagedZoom = 1.0f
-            stagedOffsetX = 0f
-            stagedOffsetY = 0f
-            isPlaying = false
         }
     }
 
@@ -1049,6 +1057,7 @@ fun ChargingMediaTab(
     var isPlaying by remember { mutableStateOf(false) }
 
     var exoPlayerInstance by remember { mutableStateOf<ExoPlayer?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     val chargingLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -1067,17 +1076,21 @@ fun ChargingMediaTab(
             stagedType = if (isVideo) "video" else "image"
 
             val fileName = if (isVideo) "charging_media_file.mp4" else "charging_media_file.jpg"
-            val localFile = copyUriToInternalStorage(context, sourceUri, fileName)
-            val uriString = if (localFile != null) {
-                Uri.fromFile(localFile).toString()
-            } else {
-                sourceUri.toString()
+            coroutineScope.launch(Dispatchers.IO) {
+                val localFile = copyUriToInternalStorage(context, sourceUri, fileName)
+                val uriString = if (localFile != null) {
+                    Uri.fromFile(localFile).toString()
+                } else {
+                    sourceUri.toString()
+                }
+                withContext(Dispatchers.Main) {
+                    stagedUri = uriString
+                    stagedZoom = 1.0f
+                    stagedOffsetX = 0f
+                    stagedOffsetY = 0f
+                    isPlaying = false
+                }
             }
-            stagedUri = uriString
-            stagedZoom = 1.0f
-            stagedOffsetX = 0f
-            stagedOffsetY = 0f
-            isPlaying = false
         }
     }
 

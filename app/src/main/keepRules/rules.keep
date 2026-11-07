@@ -1,12 +1,19 @@
-# Add project specific R8 rules here.
-# AGP will combine all keep rule files in src/main/keepRules to pass to R8
-#
-# For more details, see
-#   https://d.android.com/r/tools/r8/keep-rules
+# Project-specific R8 keep rules for Apeiron
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Retain AndroidX Media3 / ExoPlayer components and decoders
+-keep class androidx.media3.exoplayer.** { *; }
+-keep class androidx.media3.ui.** { *; }
+-keep class androidx.media3.common.** { *; }
+-dontwarn androidx.media3.**
+-dontwarn com.google.errorprone.annotations.**
+
+# Retain Coil ImageLoader & GIF decoder
+-keep class coil.** { *; }
+-dontwarn coil.**
+-keepclassmembers class * implements coil.decode.Decoder$Factory {
+    public <init>(...);
+}
+
+# Retain Coroutines internals
+-keepclassmembers class kotlinx.coroutines.** { *; }
+-dontwarn kotlinx.coroutines.**

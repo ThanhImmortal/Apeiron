@@ -97,6 +97,7 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
 
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
+    private var currentExoPlayer: ExoPlayer? = null
     private val serviceJob = SupervisorJob()
 
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -417,7 +418,7 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                 volume = if (soundEnabled) videoVolume else 0f
                                 prepare()
                                 playWhenReady = true
-                            }
+                            }.also { currentExoPlayer = it }
                         } catch (e: Exception) {
                             e.printStackTrace()
                             null
@@ -884,6 +885,11 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
     }
 
     private fun removeOverlay() {
+        try {
+            currentExoPlayer?.stop()
+            currentExoPlayer?.release()
+        } catch (_: Exception) {}
+        currentExoPlayer = null
         overlayView?.let { view ->
             try {
                 windowManager.removeViewImmediate(view)

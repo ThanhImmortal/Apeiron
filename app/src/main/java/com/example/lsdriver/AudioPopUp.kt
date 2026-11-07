@@ -915,6 +915,21 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     override fun onDestroy() {
         super.onDestroy()
+        mainHandler.removeCallbacksAndMessages(null)
+        if (::powerReceiver.isInitialized) {
+            try {
+                unregisterReceiver(powerReceiver)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        if (::audioManager.isInitialized && ::audioDeviceCallback.isInitialized) {
+            try {
+                audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
         releasePlayer()
         removeOverlay()
         serviceJob.cancel()
