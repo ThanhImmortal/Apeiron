@@ -821,7 +821,11 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
                                             Text(
-                                                text = if (isEnglish) "Charging Connected" else "Đã cắm sạc",
+                                                text = when (appLanguage) {
+                                                    "zh" -> "已连接充电"
+                                                    "en" -> "Charging Connected"
+                                                    else -> "Đã cắm sạc"
+                                                },
                                                 color = textColor,
                                                 fontSize = 24.sp,
                                                 fontFamily = FontFamily.SansSerif,
@@ -875,7 +879,11 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                             shape = RoundedCornerShape(25.dp)
                                         ) {
                                             Text(
-                                                text = if (isEnglish) "Settings" else "Cài đặt",
+                                                text = when (appLanguage) {
+                                                    "zh" -> "设置"
+                                                    "en" -> "Settings"
+                                                    else -> "Cài đặt"
+                                                },
                                                 color = textColor,
                                                 fontSize = 17.sp,
                                                 fontFamily = FontFamily.SansSerif,
@@ -898,7 +906,11 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                             shape = RoundedCornerShape(25.dp)
                                         ) {
                                             Text(
-                                                text = if (isEnglish) "Done" else "Xong",
+                                                text = when (appLanguage) {
+                                                    "zh" -> "完成"
+                                                    "en" -> "Done"
+                                                    else -> "Xong"
+                                                },
                                                 color = Color.White,
                                                 fontSize = 17.sp,
                                                 fontFamily = FontFamily.SansSerif,

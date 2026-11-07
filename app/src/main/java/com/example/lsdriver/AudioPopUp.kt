@@ -853,7 +853,11 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Text(
-                                            text = if (isEnglish) "Connected $deviceName" else "Đã kết nối $deviceName",
+                                            text = when (appLanguage) {
+                                                "zh" -> "已连接 $deviceName"
+                                                "en" -> "Connected $deviceName"
+                                                else -> "Đã kết nối $deviceName"
+                                            },
                                             color = textColor,
                                             fontSize = 21.sp,
                                             fontFamily = FontFamily.SansSerif,
@@ -886,7 +890,11 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                 shape = RoundedCornerShape(25.dp)
                                             ) {
                                                 Text(
-                                                    text = if (isEnglish) "Settings" else "Cài đặt",
+                                                    text = when (appLanguage) {
+                                                        "zh" -> "设置"
+                                                        "en" -> "Settings"
+                                                        else -> "Cài đặt"
+                                                    },
                                                     color = textColor,
                                                     fontSize = 17.sp,
                                                     fontFamily = FontFamily.SansSerif,
@@ -909,7 +917,11 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                 shape = RoundedCornerShape(25.dp)
                                             ) {
                                                 Text(
-                                                    text = if (isEnglish) "Done" else "Xong",
+                                                    text = when (appLanguage) {
+                                                        "zh" -> "完成"
+                                                        "en" -> "Done"
+                                                        else -> "Xong"
+                                                    },
                                                     color = Color.White,
                                                     fontSize = 17.sp,
                                                     fontFamily = FontFamily.SansSerif,

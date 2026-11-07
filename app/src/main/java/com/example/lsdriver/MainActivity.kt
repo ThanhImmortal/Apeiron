@@ -125,6 +125,14 @@ fun copyUriToInternalStorage(context: Context, uri: Uri, fileName: String): File
     }
 }
 
+fun tr(lang: String, vi: String, en: String, zh: String): String {
+    return when (lang) {
+        "zh" -> zh
+        "en" -> en
+        else -> vi
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(onThemeChanged: (String) -> Unit) {
@@ -269,19 +277,19 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
                         selected = selectedTab == 0,
                         onClick = { selectTab(0) },
                         interactionSource = remember { MutableInteractionSource() },
-                        text = { Text(if (isEnglish) "Headset Pop-up" else "Pop-up Tai nghe", fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1) }
+                        text = { Text(tr(appLanguage, "Pop-up Tai nghe", "Headset Pop-up", "耳机弹窗"), fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1) }
                     )
                     Tab(
                         selected = selectedTab == 1,
                         onClick = { selectTab(1) },
                         interactionSource = remember { MutableInteractionSource() },
-                        text = { Text(if (isEnglish) "Charging Pop-up" else "Pop-up Sạc pin", fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1) }
+                        text = { Text(tr(appLanguage, "Pop-up Sạc pin", "Charging Pop-up", "充电弹窗"), fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1) }
                     )
                     Tab(
                         selected = selectedTab == 2,
                         onClick = { selectTab(2) },
                         interactionSource = remember { MutableInteractionSource() },
-                        text = { Text(if (isEnglish) "Settings & Presets" else "Cài đặt & Preset", fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1) }
+                        text = { Text(tr(appLanguage, "Cài đặt & Preset", "Settings & Presets", "设置与预设"), fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1) }
                     )
                 }
             }
@@ -302,6 +310,7 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
                     popupCardHeight = popupCardHeight,
                     soundEnabled = soundEnabled,
                     videoVolume = videoVolume,
+                    appLanguage = appLanguage,
                     isEnglish = isEnglish,
                     hasOverlayPermission = hasOverlayPermission,
                     onSoundEnabledChange = {
@@ -327,6 +336,7 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
                     popupCardHeight = popupCardHeight,
                     soundEnabled = chargingSoundEnabled,
                     videoVolume = chargingVolume,
+                    appLanguage = appLanguage,
                     isEnglish = isEnglish,
                     onSoundEnabledChange = {
                         chargingSoundEnabled = it
@@ -392,7 +402,8 @@ fun PopupMediaTab(
     popupCardHeight: Int,
     soundEnabled: Boolean,
     videoVolume: Float,
-    isEnglish: Boolean,
+    appLanguage: String = "vi",
+    isEnglish: Boolean = appLanguage == "en",
     hasOverlayPermission: Boolean,
     onSoundEnabledChange: (Boolean) -> Unit,
     onVolumeChange: (Float) -> Unit,
@@ -558,7 +569,7 @@ fun PopupMediaTab(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = if (isEnglish) "Please enable Display over other apps permission" else "Vui lòng bật Cho phép hiển thị trên các ứng dụng khác",
+                        text = tr(appLanguage, "Vui lòng bật Cho phép hiển thị trên các ứng dụng khác", "Please enable Display over other apps permission", "请开启“显示在其他应用上层”权限"),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -567,7 +578,7 @@ fun PopupMediaTab(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(if (isEnglish) "Go to Settings" else "Đi tới Cài đặt")
+                        Text(tr(appLanguage, "Đi tới Cài đặt", "Go to Settings", "前往设置"))
                     }
                 }
             }
@@ -579,13 +590,13 @@ fun PopupMediaTab(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (isEnglish) "Preview" else "Xem trước",
+                text = tr(appLanguage, "Xem trước", "Preview", "预览"),
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = if (isEnglish) "Reset" else "Đặt lại",
+                text = tr(appLanguage, "Đặt lại", "Reset", "重置"),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium,
@@ -695,7 +706,12 @@ fun PopupMediaTab(
                 }
             } else {
                 Text(
-                    text = if (isEnglish) "No Media Selected\n(Tap button below to choose)" else "Chưa chọn Media\n(Bấm nút dưới để chọn)",
+                    text = tr(
+                        appLanguage,
+                        "Chưa chọn Media\n(Bấm nút dưới để chọn)",
+                        "No Media Selected\n(Tap button below to choose)",
+                        "未选择媒体\n(点击下方按钮选择)"
+                    ),
                     color = Color.Gray,
                     fontSize = 12.sp,
                     textAlign = TextAlign.Center
@@ -723,7 +739,7 @@ fun PopupMediaTab(
                 verticalArrangement = Arrangement.Bottom
             ) {
                 Text(
-                    text = if (isEnglish) "Connected $deviceName" else "Đã kết nối $deviceName",
+                    text = tr(appLanguage, "Đã kết nối $deviceName", "Connected $deviceName", "已连接 $deviceName"),
                     color = Color.White,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -742,7 +758,7 @@ fun PopupMediaTab(
                             .background(Color(0x44FFFFFF)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(if (isEnglish) "Settings" else "Cài đặt", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                        Text(tr(appLanguage, "Cài đặt", "Settings", "设置"), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                     }
                     Box(
                         modifier = Modifier
@@ -752,7 +768,7 @@ fun PopupMediaTab(
                             .background(accentColor),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(if (isEnglish) "Done" else "Xong", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text(tr(appLanguage, "Xong", "Done", "完成"), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -771,7 +787,7 @@ fun PopupMediaTab(
                     .height(44.dp),
                 shape = RoundedCornerShape(14.dp)
             ) {
-                Text(if (isEnglish) "Select Media" else "Chọn Media", fontSize = 13.sp, maxLines = 1)
+                Text(tr(appLanguage, "Chọn Media", "Select Media", "选择媒体"), fontSize = 13.sp, maxLines = 1)
             }
 
             if (stagedUri.isNotEmpty() && isStagedVideo) {
@@ -793,7 +809,7 @@ fun PopupMediaTab(
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Text(
-                        text = if (isPlaying) (if (isEnglish) "Stop" else "Dừng") else (if (isEnglish) "Play" else "Phát"),
+                        text = if (isPlaying) tr(appLanguage, "Dừng", "Stop", "停止") else tr(appLanguage, "Phát", "Play", "播放"),
                         color = Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
@@ -818,7 +834,7 @@ fun PopupMediaTab(
                     modifier = Modifier.height(44.dp),
                     shape = RoundedCornerShape(14.dp)
                 ) {
-                    Text(if (isEnglish) "Delete" else "Xóa", fontSize = 13.sp, maxLines = 1)
+                    Text(tr(appLanguage, "Xóa", "Delete", "删除"), fontSize = 13.sp, maxLines = 1)
                 }
             }
         }
@@ -838,7 +854,11 @@ fun PopupMediaTab(
                     .putFloat("image_offset_x_normalized", normalizedOffsetX)
                     .putFloat("image_offset_y_normalized", normalizedOffsetY)
                     .apply()
-                Toast.makeText(context, if (isEnglish) "Applied new framing to Pop-up!" else "Đã áp dụng cài đặt khung hình mới vào Pop-up!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    tr(appLanguage, "Đã áp dụng cài đặt khung hình mới vào Pop-up!", "Applied new framing to Pop-up!", "已将新画面构图应用至弹窗！"),
+                    Toast.LENGTH_SHORT
+                ).show()
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -847,7 +867,7 @@ fun PopupMediaTab(
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(
-                text = if (isEnglish) "Apply" else "Áp dụng",
+                text = tr(appLanguage, "Áp dụng", "Apply", "应用"),
                 color = Color.Black,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
@@ -856,6 +876,7 @@ fun PopupMediaTab(
 
         // Compact Framing Card
         FramingSlidersCard(
+            appLanguage = appLanguage,
             isEnglish = isEnglish,
             zoomProvider = { stagedZoom },
             onZoomChange = { stagedZoom = it },
@@ -872,7 +893,7 @@ fun PopupMediaTab(
 
         // Headset Audio Settings Card
         AudioSettingsCard(
-            title = if (isEnglish) "Headset Sound" else "Âm thanh tai nghe",
+            title = tr(appLanguage, "Âm thanh tai nghe", "Headset Sound", "耳机音效"),
             soundEnabled = soundEnabled,
             onSoundEnabledChange = onSoundEnabledChange,
             volumeProvider = { videoVolume },
@@ -880,6 +901,7 @@ fun PopupMediaTab(
             onVolumeChangeFinished = {
                 prefs.edit().putFloat("video_volume", videoVolume).apply()
             },
+            appLanguage = appLanguage,
             isEnglish = isEnglish
         )
 
@@ -901,7 +923,7 @@ fun PopupMediaTab(
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(
-                text = if (isEnglish) "Test Headset Pop-up" else "Kiểm tra Pop-up Tai nghe",
+                text = tr(appLanguage, "Kiểm tra Pop-up Tai nghe", "Test Headset Pop-up", "测试耳机弹窗"),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -918,7 +940,8 @@ fun ChargingMediaTab(
     popupCardHeight: Int,
     soundEnabled: Boolean,
     videoVolume: Float,
-    isEnglish: Boolean,
+    appLanguage: String = "vi",
+    isEnglish: Boolean = appLanguage == "en",
     onSoundEnabledChange: (Boolean) -> Unit,
     onVolumeChange: (Float) -> Unit
 ) {
@@ -1088,13 +1111,13 @@ fun ChargingMediaTab(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (isEnglish) "Preview" else "Xem trước",
+                text = tr(appLanguage, "Xem trước", "Preview", "预览"),
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = if (isEnglish) "Reset" else "Đặt lại",
+                text = tr(appLanguage, "Đặt lại", "Reset", "重置"),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium,
@@ -1204,7 +1227,12 @@ fun ChargingMediaTab(
                 }
             } else {
                 Text(
-                    text = if (isEnglish) "No Media Selected\n(Tap button below to choose)" else "Chưa chọn Media\n(Bấm nút dưới để chọn)",
+                    text = tr(
+                        appLanguage,
+                        "Chưa chọn Media\n(Bấm nút dưới để chọn)",
+                        "No Media Selected\n(Tap button below to choose)",
+                        "未选择媒体\n(点击下方按钮选择)"
+                    ),
                     color = Color.Gray,
                     fontSize = 12.sp,
                     textAlign = TextAlign.Center
@@ -1232,7 +1260,7 @@ fun ChargingMediaTab(
                 verticalArrangement = Arrangement.Bottom
             ) {
                 Text(
-                    text = if (isEnglish) "Charging Connected" else "Đã cắm sạc",
+                    text = tr(appLanguage, "Đã cắm sạc", "Charging Connected", "已连接充电"),
                     color = Color.White,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -1251,7 +1279,7 @@ fun ChargingMediaTab(
                             .background(Color(0x44FFFFFF)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(if (isEnglish) "Settings" else "Cài đặt", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                        Text(tr(appLanguage, "Cài đặt", "Settings", "设置"), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                     }
                     Box(
                         modifier = Modifier
@@ -1261,7 +1289,7 @@ fun ChargingMediaTab(
                             .background(accentColor),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(if (isEnglish) "Done" else "Xong", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text(tr(appLanguage, "Xong", "Done", "完成"), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1280,7 +1308,7 @@ fun ChargingMediaTab(
                     .height(44.dp),
                 shape = RoundedCornerShape(14.dp)
             ) {
-                Text(if (isEnglish) "Select Media" else "Chọn Media", fontSize = 13.sp, maxLines = 1)
+                Text(tr(appLanguage, "Chọn Media", "Select Media", "选择媒体"), fontSize = 13.sp, maxLines = 1)
             }
 
             if (stagedUri.isNotEmpty() && isStagedVideo) {
@@ -1302,7 +1330,7 @@ fun ChargingMediaTab(
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Text(
-                        text = if (isPlaying) (if (isEnglish) "Stop" else "Dừng") else (if (isEnglish) "Play" else "Phát"),
+                        text = if (isPlaying) tr(appLanguage, "Dừng", "Stop", "停止") else tr(appLanguage, "Phát", "Play", "播放"),
                         color = if (isPlaying) Color.White else Color.Black,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
@@ -1328,7 +1356,7 @@ fun ChargingMediaTab(
                     modifier = Modifier.height(44.dp),
                     shape = RoundedCornerShape(14.dp)
                 ) {
-                    Text(if (isEnglish) "Delete" else "Xóa", fontSize = 13.sp, maxLines = 1)
+                    Text(tr(appLanguage, "Xóa", "Delete", "删除"), fontSize = 13.sp, maxLines = 1)
                 }
             }
         }
@@ -1349,7 +1377,11 @@ fun ChargingMediaTab(
                     .putFloat("charging_offset_x_normalized", normalizedOffsetX)
                     .putFloat("charging_offset_y_normalized", normalizedOffsetY)
                     .apply()
-                Toast.makeText(context, if (isEnglish) "Applied new framing to Charging Pop-up!" else "Đã áp dụng cài đặt khung hình sạc mới vào Pop-up!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    tr(appLanguage, "Đã áp dụng cài đặt khung hình sạc mới vào Pop-up!", "Applied new framing to Charging Pop-up!", "已将充电画面新构图应用至弹窗！"),
+                    Toast.LENGTH_SHORT
+                ).show()
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -1358,7 +1390,7 @@ fun ChargingMediaTab(
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(
-                text = if (isEnglish) "Apply" else "Áp dụng",
+                text = tr(appLanguage, "Áp dụng", "Apply", "应用"),
                 color = Color.Black,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
@@ -1367,6 +1399,7 @@ fun ChargingMediaTab(
 
         // Compact Framing Card
         FramingSlidersCard(
+            appLanguage = appLanguage,
             isEnglish = isEnglish,
             zoomProvider = { stagedZoom },
             onZoomChange = { stagedZoom = it },
@@ -1382,7 +1415,7 @@ fun ChargingMediaTab(
         )
 
         // Telemetry Display Toggles Card
-        ExpandableCard(title = if (isEnglish) "Charging Info" else "Thông tin sạc", initialExpanded = false) {
+        ExpandableCard(title = tr(appLanguage, "Thông tin sạc", "Charging Info", "充电信息"), initialExpanded = false) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -1391,7 +1424,7 @@ fun ChargingMediaTab(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = if (isEnglish) "Wattage (W)" else "Công suất (W)", fontSize = 14.sp)
+                    Text(text = tr(appLanguage, "Công suất (W)", "Wattage (W)", "功率 (W)"), fontSize = 14.sp)
                     Switch(
                         checked = showWattage,
                         onCheckedChange = {
@@ -1406,7 +1439,7 @@ fun ChargingMediaTab(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = if (isEnglish) "Battery Temp" else "Nhiệt độ pin", fontSize = 14.sp)
+                    Text(text = tr(appLanguage, "Nhiệt độ pin", "Battery Temp", "电池温度"), fontSize = 14.sp)
                     Switch(
                         checked = showTemp,
                         onCheckedChange = {
@@ -1421,7 +1454,7 @@ fun ChargingMediaTab(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = if (isEnglish) "Battery Percentage (%)" else "Phần trăm pin (%)", fontSize = 14.sp)
+                    Text(text = tr(appLanguage, "Phần trăm pin (%)", "Battery Percentage (%)", "电池电量百分比 (%)"), fontSize = 14.sp)
                     Switch(
                         checked = showBattery,
                         onCheckedChange = {
@@ -1436,7 +1469,7 @@ fun ChargingMediaTab(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = if (isEnglish) "Voltage (V)" else "Số Volt (V)", fontSize = 14.sp)
+                    Text(text = tr(appLanguage, "Điện áp (V)", "Voltage (V)", "电压 (V)"), fontSize = 14.sp)
                     Switch(
                         checked = showVoltage,
                         onCheckedChange = {
@@ -1451,7 +1484,7 @@ fun ChargingMediaTab(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = if (isEnglish) "SuperVOOC Ring Effect" else "Hiệu ứng vòng tròn SuperVOOC", fontSize = 14.sp)
+                    Text(text = tr(appLanguage, "Hiệu ứng vòng tròn SuperVOOC", "SuperVOOC Ring Effect", "SuperVOOC 圆环动效"), fontSize = 14.sp)
                     Switch(
                         checked = showParticles,
                         onCheckedChange = {
@@ -1465,7 +1498,7 @@ fun ChargingMediaTab(
 
         // Charging Audio Settings Card
         AudioSettingsCard(
-            title = if (isEnglish) "Charging Sound" else "Âm thanh sạc",
+            title = tr(appLanguage, "Âm thanh sạc", "Charging Sound", "充电音效"),
             soundEnabled = soundEnabled,
             onSoundEnabledChange = onSoundEnabledChange,
             volumeProvider = { videoVolume },
@@ -1473,6 +1506,7 @@ fun ChargingMediaTab(
             onVolumeChangeFinished = {
                 chargingPrefs.edit().putFloat("charging_volume", videoVolume).apply()
             },
+            appLanguage = appLanguage,
             isEnglish = isEnglish
         )
 
@@ -1492,7 +1526,7 @@ fun ChargingMediaTab(
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(
-                text = if (isEnglish) "Test Charging Pop-up" else "Kiểm tra Pop-up Sạc pin",
+                text = tr(appLanguage, "Kiểm tra Pop-up Sạc pin", "Test Charging Pop-up", "测试充电弹窗"),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 softWrap = false
@@ -1603,7 +1637,8 @@ fun ExpandableCard(
 
 @Composable
 fun FramingSlidersCard(
-    isEnglish: Boolean,
+    appLanguage: String = "vi",
+    isEnglish: Boolean = appLanguage == "en",
     zoomProvider: () -> Float,
     onZoomChange: (Float) -> Unit,
     offsetXProvider: () -> Float,
@@ -1612,7 +1647,7 @@ fun FramingSlidersCard(
     onOffsetYChange: (Float) -> Unit,
     onResetFraming: () -> Unit
 ) {
-    ExpandableCard(title = if (isEnglish) "Size & Position" else "Kích thước và vị trí", initialExpanded = false) {
+    ExpandableCard(title = tr(appLanguage, "Kích thước và vị trí", "Size & Position", "画面位置与缩放"), initialExpanded = false) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             val zoom = zoomProvider()
             val offX = offsetXProvider()
@@ -1649,7 +1684,7 @@ fun FramingSlidersCard(
             }
 
             Text(
-                text = if (isEnglish) "Reset Framing" else "Đặt lại Khung hình",
+                text = tr(appLanguage, "Đặt lại Khung hình", "Reset Framing", "重置构图"),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.error,
                 fontWeight = FontWeight.Medium,
@@ -1676,7 +1711,8 @@ fun AudioSettingsCard(
     volumeProvider: () -> Float,
     onVolumeChange: (Float) -> Unit,
     onVolumeChangeFinished: (() -> Unit)? = null,
-    isEnglish: Boolean
+    appLanguage: String = "vi",
+    isEnglish: Boolean = appLanguage == "en"
 ) {
     ExpandableCard(title = title, initialExpanded = false) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1686,7 +1722,7 @@ fun AudioSettingsCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isEnglish) "Enable sound on play" else "Bật âm thanh khi phát",
+                    text = tr(appLanguage, "Bật âm thanh khi phát", "Enable sound on play", "播放时开启声音"),
                     fontWeight = FontWeight.Medium,
                     fontSize = 14.sp
                 )
@@ -1700,7 +1736,7 @@ fun AudioSettingsCard(
                 val vol = volumeProvider()
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = if (isEnglish) "Volume: ${(vol * 100).toInt()}%" else "Âm lượng: ${(vol * 100).toInt()}%",
+                        text = tr(appLanguage, "Âm lượng: ${(vol * 100).toInt()}%", "Volume: ${(vol * 100).toInt()}%", "音量: ${(vol * 100).toInt()}%"),
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1815,10 +1851,11 @@ val HarmoniousPaletteList = listOf(
 @Composable
 fun ColorPaletteDialog(
     initialColor: Color,
+    appLanguage: String = "vi",
     onDismiss: () -> Unit,
     onColorSelected: (PaletteColorItem) -> Unit
 ) {
-    // 0: Spectrum mode (After Effects / Photoshop), 1: Preset Grid
+    // 0: Spectrum mode (Bảng màu), 1: Preset Grid (Mẫu có sẵn)
     var selectedMode by remember { mutableIntStateOf(0) }
 
     val initialHsv = remember(initialColor) { colorToHsv(initialColor) }
@@ -1847,11 +1884,18 @@ fun ColorPaletteDialog(
         )
     }
 
+    val dialogTitle = tr(appLanguage, "Bảng chọn màu", "Color Palette", "调色板")
+    val modeTitles = when (appLanguage) {
+        "zh" -> listOf("调色板", "预设颜色")
+        "en" -> listOf("Color Palette", "Presets")
+        else -> listOf("Bảng màu", "Mẫu có sẵn")
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Bảng chọn màu", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(dialogTitle, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 
                 // Mode Switcher Tab
                 Row(
@@ -1862,7 +1906,6 @@ fun ColorPaletteDialog(
                         .padding(3.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    val modeTitles = listOf("Dải màu (AE)", "Mẫu có sẵn")
                     modeTitles.forEachIndexed { index, title ->
                         val isSelected = selectedMode == index
                         Box(
@@ -2166,12 +2209,12 @@ fun ColorPaletteDialog(
                     onColorSelected(PaletteColorItem(currentColor, "Custom", currentHex))
                 }
             ) {
-                Text("Chọn")
+                Text(tr(appLanguage, "Chọn", "Select", "选择"))
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Hủy")
+                Text(tr(appLanguage, "Hủy", "Cancel", "取消"))
             }
         }
     )
@@ -2181,6 +2224,7 @@ fun ColorPaletteDialog(
 fun ColorSettingRow(
     title: String,
     currentColorHex: String,
+    buttonText: String = "Đổi màu",
     onClick: () -> Unit
 ) {
     val parsedColor = remember(currentColorHex) {
@@ -2245,7 +2289,7 @@ fun ColorSettingRow(
                         .border(1.dp, Color.White.copy(alpha = 0.6f), CircleShape)
                 )
                 Text(
-                    text = "Đổi màu",
+                    text = buttonText,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
@@ -2274,7 +2318,6 @@ fun SettingsPresetTab(
 ) {
     val scrollState = rememberScrollState()
     var refreshKey by remember { mutableIntStateOf(0) }
-    val isEnglish = appLanguage == "en"
 
     Column(
         modifier = Modifier
@@ -2294,7 +2337,7 @@ fun SettingsPresetTab(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = if (isEnglish) "IMPORTANT: Please enable Display over other apps permission" else "QUAN TRỌNG: Vui lòng bật \"Cho phép hiển thị trên các ứng dụng khác\"",
+                        text = tr(appLanguage, "QUAN TRỌNG: Vui lòng bật \"Cho phép hiển thị trên các ứng dụng khác\"", "IMPORTANT: Please enable Display over other apps permission", "重要提示：请开启“显示在其他应用上层”权限"),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onErrorContainer
@@ -2304,12 +2347,13 @@ fun SettingsPresetTab(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text(if (isEnglish) "Go to Settings" else "Đi tới Cài đặt")
+                        Text(tr(appLanguage, "Đi tới Cài đặt", "Go to Settings", "前往设置"))
                     }
                 }
             }
         }
 
+        // Standardized Guide Card with OEM disclaimer
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
@@ -2317,35 +2361,74 @@ fun SettingsPresetTab(
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = if (isEnglish) "GUIDE" else "HƯỚNG DẪN",
+                    text = tr(appLanguage, "HƯỚNG DẪN DUY TRÌ HOẠT ĐỘNG NGẦM", "BACKGROUND RUNTIME GUIDE", "后台常驻与保活指南"),
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
+
+                // Phone OEM Disclaimer
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = tr(
+                            appLanguage,
+                            "Lưu ý: Tùy thuộc vào từng dòng máy (Xiaomi / HyperOS, Samsung / One UI, OPPO / ColorOS, Vivo...), tên gọi và vị trí các mục cài đặt có thể sẽ khác nhau.",
+                            "Note: Depending on your device brand and OS skin (Samsung, Xiaomi, OPPO, Vivo...), setting names and locations may vary slightly.",
+                            "提示：受不同手机品牌（小米 HyperOS/MIUI、三星 One UI、OPPO ColorOS、vivo OriginOS 等）系统影响，各设置项名称及位置可能略有差异。"
+                        ),
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
+                        lineHeight = 16.sp,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                    )
+                }
+
                 Text(
-                    text = if (isEnglish) "1. Please enable Lock in Recents / Lock App in background.\n(Open Recents -> 3 dots on App card -> Lock)" else "1. Vui lòng bật \"Khóa đa nhiệm\" hoặc \"Cố định ứng dụng chạy ngầm\"\n(Mở đa nhiệm => Dấu 3 chấm trên tab app => Khóa)",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    text = if (isEnglish) "2. Please set Battery Optimization to \"Unrestricted / Allow background activity\" in Battery Settings." else "2. Vui lòng bật \"Cho phép hoạt động dưới nền\" (Tối ưu hóa Pin => Không giới hạn) trong Cài đặt pin.",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    text = if (isEnglish) "3. Please enable \"Autostart / Auto-launch\" permission in App / System Settings." else "3. Vui lòng bật \"Tự khởi chạy\" (Autostart) trong Cài đặt ứng dụng / Quản lý hệ thống.",
-                    fontSize = 13.sp,
+                    text = tr(
+                        appLanguage,
+                        "1. Khóa ứng dụng trong Đa nhiệm (Recent Apps):\nMở màn hình Đa nhiệm → Nhấn giữ hoặc bấm vào menu 3 chấm trên thẻ ứng dụng Apeiron → Chọn biểu tượng \"Khóa\" để ngăn hệ thống tự động xóa bộ nhớ.",
+                        "1. Lock App in Recent Apps:\nOpen Recent Apps overview → Long-press or tap 3 dots on Apeiron card → Select \"Lock\" icon to prevent memory clearance.",
+                        "1. 锁定后台多任务卡片：\n打开多任务后台界面 → 长按或点击 Apeiron 卡片右上角菜单 → 选择“加锁”图标，防止被系统清理后台。"
+                    ),
+                    fontSize = 12.5.sp,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    lineHeight = 18.sp
+                    lineHeight = 17.sp
+                )
+                Text(
+                    text = tr(
+                        appLanguage,
+                        "2. Cho phép hoạt động dưới nền không hạn chế:\nVào Cài đặt → Pin & Hiệu suất (hoặc Thông tin ứng dụng) → Tối ưu hóa pin / Sử dụng pin → Chuyển sang \"Không giới hạn\" hoặc \"Cho phép chạy ngầm\".",
+                        "2. Unrestricted Battery Usage:\nOpen Settings → Battery (or App Info) → Battery Optimization → Set to \"Unrestricted\" or \"Allow background activity\".",
+                        "2. 电池优化设为无限制：\n进入系统设置 → 电池与性能（或应用详情） → 电池优化/省电策略 → 选择“无限制”或“允许后台活动”。"
+                    ),
+                    fontSize = 12.5.sp,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    lineHeight = 17.sp
+                )
+                Text(
+                    text = tr(
+                        appLanguage,
+                        "3. Cấp quyền Tự khởi chạy (Autostart):\nVào Cài đặt → Ứng dụng (hoặc Quản lý quyền) → Apeiron → Bật quyền \"Tự khởi chạy\" và \"Chạy dưới nền\" để ứng dụng luôn sẵn sàng kích hoạt pop-up khi cắm tai nghe hoặc dây sạc.",
+                        "3. Enable Autostart & Background Launch:\nOpen Settings → Apps & Permissions → Apeiron → Enable \"Autostart\" and \"Run in background\" for instant pop-up triggers.",
+                        "3. 开启自启动与后台运行权限：\n进入系统设置 → 应用管理/权限管理 → Apeiron → 开启“自启动”与“允许后台运行”，确保插拔设备时能即刻弹出界面。"
+                    ),
+                    fontSize = 12.5.sp,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    lineHeight = 17.sp
                 )
             }
         }
 
         // 1. Color Customization Card
-        ExpandableCard(title = if (isEnglish) "Pop-up Colors" else "Màu sắc Pop-up", initialExpanded = false) {
+        ExpandableCard(title = tr(appLanguage, "Màu sắc Pop-up", "Pop-up Colors", "弹窗颜色设置"), initialExpanded = false) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 var headsetColor by remember { mutableStateOf(prefs.getString("headset_popup_color", "blue") ?: "blue") }
                 var chargingColor by remember { mutableStateOf(chargingPrefs.getString("charging_popup_color", "cyan") ?: "cyan") }
@@ -2356,8 +2439,9 @@ fun SettingsPresetTab(
                 var showChargingRingPalette by remember { mutableStateOf(false) }
 
                 ColorSettingRow(
-                    title = if (isEnglish) "Headset Pop-up Color" else "Màu sắc Pop-up Tai nghe",
+                    title = tr(appLanguage, "Màu sắc Pop-up Tai nghe", "Headset Pop-up Color", "耳机弹窗主题色"),
                     currentColorHex = headsetColor,
+                    buttonText = tr(appLanguage, "Đổi màu", "Pick Color", "取色"),
                     onClick = { showHeadsetPalette = true }
                 )
 
@@ -2369,6 +2453,7 @@ fun SettingsPresetTab(
                     }
                     ColorPaletteDialog(
                         initialColor = initial,
+                        appLanguage = appLanguage,
                         onDismiss = { showHeadsetPalette = false },
                         onColorSelected = { paletteItem ->
                             headsetColor = paletteItem.hexString
@@ -2379,8 +2464,9 @@ fun SettingsPresetTab(
                 }
 
                 ColorSettingRow(
-                    title = if (isEnglish) "Charging Pop-up Color" else "Màu sắc Pop-up Sạc pin",
+                    title = tr(appLanguage, "Màu sắc Pop-up Sạc pin", "Charging Pop-up Color", "充电弹窗主题色"),
                     currentColorHex = chargingColor,
+                    buttonText = tr(appLanguage, "Đổi màu", "Pick Color", "取色"),
                     onClick = { showChargingPalette = true }
                 )
 
@@ -2392,6 +2478,7 @@ fun SettingsPresetTab(
                     }
                     ColorPaletteDialog(
                         initialColor = initial,
+                        appLanguage = appLanguage,
                         onDismiss = { showChargingPalette = false },
                         onColorSelected = { paletteItem ->
                             chargingColor = paletteItem.hexString
@@ -2402,8 +2489,9 @@ fun SettingsPresetTab(
                 }
 
                 ColorSettingRow(
-                    title = if (isEnglish) "Charging Ring & Particles" else "Màu vòng tròn & Hiệu ứng sạc",
+                    title = tr(appLanguage, "Màu vòng tròn & Hiệu ứng sạc", "Charging Ring & Particles", "充电圆环与粒子特效颜色"),
                     currentColorHex = chargingRingColor,
+                    buttonText = tr(appLanguage, "Đổi màu", "Pick Color", "取色"),
                     onClick = { showChargingRingPalette = true }
                 )
 
@@ -2415,6 +2503,7 @@ fun SettingsPresetTab(
                     }
                     ColorPaletteDialog(
                         initialColor = initial,
+                        appLanguage = appLanguage,
                         onDismiss = { showChargingRingPalette = false },
                         onColorSelected = { paletteItem ->
                             chargingRingColor = paletteItem.hexString
@@ -2427,16 +2516,24 @@ fun SettingsPresetTab(
         }
 
         // Background Color Card - UNIFIED SEAMLESS SEGMENTED SELECTOR!
-        ExpandableCard(title = if (isEnglish) "Pop-up Background" else "Màu nền Pop-up") {
+        ExpandableCard(title = tr(appLanguage, "Màu nền Pop-up", "Pop-up Background", "弹窗背景颜色")) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 var bgStyle by remember { mutableStateOf(prefs.getString("popup_bg_style", "default") ?: "default") }
                 var customBgColor by remember { mutableStateOf(prefs.getString("popup_bg_color", "") ?: "") }
                 var showBgPalette by remember { mutableStateOf(false) }
 
-                Text(text = if (isEnglish) "Preset Style:" else "Kiểu nền mẫu:", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                Text(
+                    text = tr(appLanguage, "Kiểu nền mẫu:", "Preset Style:", "预设背景样式："),
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp
+                )
                 
-                val bgOptions = if (isEnglish) listOf("default" to "Default", "black" to "Black", "navy" to "Navy", "carbon" to "Carbon")
-                else listOf("default" to "Mặc định", "black" to "Đen", "navy" to "Navy", "carbon" to "Carbon")
+                val bgOptions = listOf(
+                    "default" to tr(appLanguage, "Mặc định", "Default", "默认"),
+                    "black" to tr(appLanguage, "Đen", "Black", "黑色"),
+                    "navy" to tr(appLanguage, "Navy", "Navy", "藏青"),
+                    "carbon" to tr(appLanguage, "Carbon", "Carbon", "碳黑")
+                )
 
                 SegmentedSelector(
                     options = bgOptions,
@@ -2449,8 +2546,9 @@ fun SettingsPresetTab(
                 )
 
                 ColorSettingRow(
-                    title = if (isEnglish) "Custom Background Color" else "Màu nền tùy chỉnh",
+                    title = tr(appLanguage, "Màu nền tùy chỉnh", "Custom Background Color", "自定义背景颜色"),
                     currentColorHex = if (customBgColor.isEmpty()) "#1E1E2C" else customBgColor,
+                    buttonText = tr(appLanguage, "Đổi màu", "Pick Color", "取色"),
                     onClick = { showBgPalette = true }
                 )
 
@@ -2462,6 +2560,7 @@ fun SettingsPresetTab(
                     }
                     ColorPaletteDialog(
                         initialColor = initial,
+                        appLanguage = appLanguage,
                         onDismiss = { showBgPalette = false },
                         onColorSelected = { paletteItem ->
                             customBgColor = paletteItem.hexString
@@ -2474,21 +2573,38 @@ fun SettingsPresetTab(
         }
 
         // 2. App Theme, Language & Master Switches Card - UNIFIED SEAMLESS SEGMENTED SELECTORS!
-        ExpandableCard(title = if (isEnglish) "App Theme & Language" else "Giao diện và bật tắt") {
+        ExpandableCard(title = tr(appLanguage, "Giao diện và bật tắt", "App Theme & Language", "界面外观与开关")) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = if (isEnglish) "App Language" else "Ngôn ngữ giao diện", fontWeight = FontWeight.Medium, fontSize = 13.sp, maxLines = 1)
+                Text(
+                    text = tr(appLanguage, "Ngôn ngữ giao diện", "App Language", "界面语言"),
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp,
+                    maxLines = 1
+                )
                 
                 SegmentedSelector(
-                    options = listOf("vi" to "Tiếng Việt", "en" to "English"),
+                    options = listOf(
+                        "vi" to "Tiếng Việt",
+                        "en" to "English",
+                        "zh" to "简体中文"
+                    ),
                     selectedKey = appLanguage,
                     onOptionSelected = { onLanguageChange(it) }
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(text = if (isEnglish) "App Theme Mode" else "Giao diện ứng dụng", fontWeight = FontWeight.Medium, fontSize = 13.sp, maxLines = 1)
+                Text(
+                    text = tr(appLanguage, "Giao diện ứng dụng", "App Theme Mode", "应用主题模式"),
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp,
+                    maxLines = 1
+                )
                 
-                val themeOptions = if (isEnglish) listOf("system" to "System", "light" to "Light", "dark" to "Dark")
-                else listOf("system" to "Hệ thống", "light" to "Sáng", "dark" to "Tối")
+                val themeOptions = listOf(
+                    "system" to tr(appLanguage, "Hệ thống", "System", "跟随系统"),
+                    "light" to tr(appLanguage, "Sáng", "Light", "浅色"),
+                    "dark" to tr(appLanguage, "Tối", "Dark", "深色")
+                )
 
                 SegmentedSelector(
                     options = themeOptions,
@@ -2508,7 +2624,7 @@ fun SettingsPresetTab(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = if (isEnglish) "Enable Headset Pop-up" else "Bật Pop-up Tai nghe", fontSize = 13.sp, maxLines = 1)
+                    Text(text = tr(appLanguage, "Bật Pop-up Tai nghe", "Enable Headset Pop-up", "开启耳机弹窗"), fontSize = 13.sp, maxLines = 1)
                     Switch(
                         checked = enableHeadset,
                         onCheckedChange = {
@@ -2526,7 +2642,7 @@ fun SettingsPresetTab(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = if (isEnglish) "Enable Charging Pop-up" else "Bật Pop-up Sạc pin", fontSize = 13.sp, maxLines = 1)
+                    Text(text = tr(appLanguage, "Bật Pop-up Sạc pin", "Enable Charging Pop-up", "开启充电弹窗"), fontSize = 13.sp, maxLines = 1)
                     Switch(
                         checked = enableCharging,
                         onCheckedChange = {
@@ -2544,7 +2660,7 @@ fun SettingsPresetTab(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = if (isEnglish) "Enable Landscape Pop-up" else "Bật Pop-up màn hình ngang", fontSize = 13.sp, maxLines = 1)
+                    Text(text = tr(appLanguage, "Bật Pop-up màn hình ngang", "Enable Landscape Pop-up", "开启横屏弹窗"), fontSize = 13.sp, maxLines = 1)
                     Switch(
                         checked = enableLandscape,
                         onCheckedChange = {
@@ -2558,7 +2674,7 @@ fun SettingsPresetTab(
         }
 
         // 3. Multi-slot Presets Card
-        ExpandableCard(title = if (isEnglish) "Preset Manager" else "Quản lý Preset") {
+        ExpandableCard(title = tr(appLanguage, "Quản lý Preset", "Preset Manager", "预设配置管理")) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (slot in 1..3) {
                     val slotExists = remember(refreshKey) { prefs.getBoolean("preset_${slot}_exists", false) }
@@ -2568,7 +2684,7 @@ fun SettingsPresetTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Preset $slot ${if (slotExists) (if (isEnglish) "(Saved)" else "(Đã lưu)") else (if (isEnglish) "(Empty)" else "(Trống)")}",
+                            text = "Preset $slot ${if (slotExists) tr(appLanguage, "(Đã lưu)", "(Saved)", "(已保存)") else tr(appLanguage, "(Trống)", "(Empty)", "(未配置)")}",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             maxLines = 1
@@ -2604,7 +2720,7 @@ fun SettingsPresetTab(
                                 modifier = Modifier.height(34.dp),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
-                                Text(if (isEnglish) "Save" else "Lưu / Cập nhật", fontSize = 11.sp, maxLines = 1)
+                                Text(tr(appLanguage, "Lưu", "Save", "保存"), fontSize = 11.sp, maxLines = 1)
                             }
 
                             if (slotExists) {
@@ -2657,7 +2773,7 @@ fun SettingsPresetTab(
                                     modifier = Modifier.height(34.dp),
                                     shape = RoundedCornerShape(10.dp)
                                 ) {
-                                    Text(if (isEnglish) "Load" else "Tải", fontSize = 11.sp, maxLines = 1)
+                                    Text(tr(appLanguage, "Tải", "Load", "载入"), fontSize = 11.sp, maxLines = 1)
                                 }
                             }
                         }
@@ -2667,9 +2783,9 @@ fun SettingsPresetTab(
         }
 
         // 4. Device Name & Framing Card - NO TEXT CLIPPING ON RESET BUTTON!
-        ExpandableCard(title = if (isEnglish) "Device Name & Card Dimensions" else "Tên thiết bị và kích thước Pop-up") {
+        ExpandableCard(title = tr(appLanguage, "Tên thiết bị và kích thước Pop-up", "Device Name & Card Dimensions", "设备名称与弹窗尺寸")) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = if (isEnglish) "Display Device Name" else "Tên thiết bị hiển thị", fontWeight = FontWeight.Medium, fontSize = 13.sp, maxLines = 1)
+                Text(text = tr(appLanguage, "Tên thiết bị hiển thị", "Display Device Name", "显示设备名称"), fontWeight = FontWeight.Medium, fontSize = 13.sp, maxLines = 1)
                 var textState by remember(deviceName) { mutableStateOf(deviceName) }
                 OutlinedTextField(
                     value = textState,
@@ -2690,9 +2806,9 @@ fun SettingsPresetTab(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = if (isEnglish) "Pop-up Height: ${popupCardHeight}dp" else "Chiều cao Pop-up: ${popupCardHeight}dp", fontWeight = FontWeight.Medium, fontSize = 12.sp, maxLines = 1)
+                        Text(text = tr(appLanguage, "Chiều cao Pop-up: ${popupCardHeight}dp", "Pop-up Height: ${popupCardHeight}dp", "弹窗高度: ${popupCardHeight}dp"), fontWeight = FontWeight.Medium, fontSize = 12.sp, maxLines = 1)
                         Text(
-                            text = if (isEnglish) "Reset" else "Đặt lại",
+                            text = tr(appLanguage, "Đặt lại", "Reset", "重置"),
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Medium,
@@ -2727,13 +2843,14 @@ fun SettingsPresetTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (isEnglish) "Pop-up Width: ${if (popupCardWidth > 0) "${popupCardWidth}dp" else "Full Width"}" else "Độ rộng Pop-up: ${if (popupCardWidth > 0) "${popupCardWidth}dp" else "Toàn màn hình"}",
+                            text = if (popupCardWidth > 0) tr(appLanguage, "Độ rộng Pop-up: ${popupCardWidth}dp", "Pop-up Width: ${popupCardWidth}dp", "弹窗宽度: ${popupCardWidth}dp")
+                            else tr(appLanguage, "Độ rộng Pop-up: Toàn màn hình", "Pop-up Width: Full Width", "弹窗宽度: 全屏"),
                             fontWeight = FontWeight.Medium,
                             fontSize = 12.sp,
                             maxLines = 1
                         )
                         Text(
-                            text = if (isEnglish) "Reset" else "Đặt lại",
+                            text = tr(appLanguage, "Đặt lại", "Reset", "重置"),
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Medium,
@@ -2783,7 +2900,7 @@ fun SettingsPresetTab(
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = if (isEnglish) "Developed by Nguyen Chi Thanh" else "Phát triển bởi Nguyễn Chí Thành",
+                text = tr(appLanguage, "Phát triển bởi Nguyễn Chí Thành", "Developed by Nguyen Chi Thanh", "由阮志成 (Nguyen Chi Thanh) 开发"),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
