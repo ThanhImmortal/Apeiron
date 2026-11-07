@@ -638,17 +638,6 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                     }
                                 }
                                 .clip(cardShape)
-                                .border(
-                                    width = 1.dp,
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color.White.copy(alpha = 0.22f),
-                                            Color.White.copy(alpha = 0.05f),
-                                            Color.Transparent
-                                        )
-                                    ),
-                                    shape = cardShape
-                                )
                                 .background(
                                     Brush.verticalGradient(
                                         colors = listOf(bgColor1, bgColor2)
