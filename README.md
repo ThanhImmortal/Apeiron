@@ -12,9 +12,14 @@ Apeiron is an open-source Android application that displays smooth animated over
 
 ## Features
 
-* **Audio Connection Pop-up:** Automatically detects and displays animated pop-up widgets when plugging in headphones or connecting audio accessories.
-* **Charging Overlay:** Dynamic overlay feedback when connecting or disconnecting power sources.
-* **Performance-Oriented:** Built with Jetpack Compose, optimized for the render thread, low battery consumption, and clean service lifecycle handling to prevent memory leaks.
+### Audio Connection Pop-up
+Automatically detects and displays animated pop-up widgets when plugging in headphones or connecting audio accessories.
+
+### Charging Overlay
+Dynamic overlay feedback when connecting or disconnecting power sources.
+
+### Performance-Oriented
+Built with Jetpack Compose, optimized for the render thread, low battery consumption, and clean service lifecycle handling to prevent memory leaks.
 
 ---
 
@@ -25,16 +30,19 @@ Download the latest prebuilt APK directly:
 1. Go to the [Releases](https://github.com/ThanhImmortal/Apeiron/releases) section.
 2. Download `Apeiron.apk` from the latest release asset list.
 3. Install the APK and grant the required system permission:
-   * **Display over other apps** (*Overlay permission*) to allow pop-up widgets to appear over other applications.
+Display over other apps (Overlay permission) to allow pop-up widgets to appear over other applications.
 
 ---
 
 ## Tech Stack
 
-* **Language:** Kotlin
-* **UI Toolkit:** Jetpack Compose (Material 3)
-* **Platform & Build:** Android SDK (API 35), Gradle Kotlin DSL (`build.gradle.kts`)
-* **Core Components:** Foreground Service, BroadcastReceiver, WindowManager Overlay
+Language: Kotlin
+
+UI Toolkit: Jetpack Compose (Material 3)
+
+Platform & Build: Android SDK (API 35), Gradle Kotlin DSL (`build.gradle.kts`)
+
+Core Components: Foreground Service, BroadcastReceiver, WindowManager Overlay
 
 ---
 
@@ -43,5 +51,5 @@ Download the latest prebuilt APK directly:
 To build the APK locally from source:
 
 1. Clone the repository:
-   ```bash
-   git clone [https://github.com/ThanhImmortal/Apeiron.git](https://github.com/ThanhImmortal/Apeiron.git)
+```bash
+git clone [https://github.com/ThanhImmortal/Apeiron.git](https://github.com/ThanhImmortal/Apeiron.git)
