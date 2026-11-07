@@ -3091,7 +3091,7 @@ fun SettingsPresetTab(
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = tr(appLanguage, "Phát triển bởi Nguyễn Chí Thành", "Developed by Nguyen Chi Thanh", "由阮志成 (Nguyen Chi Thanh) 开发"),
+                text = tr(appLanguage, "Phát triển bởi Nguyễn Chí Thanh", "Developed by Nguyen Chi Thanh", "由阮志成 (Nguyen Chi Thanh) 开发"),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
