@@ -24,7 +24,7 @@ Download the latest prebuilt APK directly:
 
 1. Go to the [Releases](https://github.com/ThanhImmortal/Apeiron/releases) section.
 2. Download `Apeiron.apk` from the latest release asset list.
-3. Install the APK and grant required system permissions:
+3. Install the APK and grant the required system permission:
    * **Display over other apps** (*Overlay permission*) to allow pop-up widgets to appear over other applications.
 
 ---
@@ -35,3 +35,13 @@ Download the latest prebuilt APK directly:
 * **UI Toolkit:** Jetpack Compose (Material 3)
 * **Platform & Build:** Android SDK (API 35), Gradle Kotlin DSL (`build.gradle.kts`)
 * **Core Components:** Foreground Service, BroadcastReceiver, WindowManager Overlay
+
+---
+
+## Local Build
+
+To build the APK locally from source:
+
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/ThanhImmortal/Apeiron.git](https://github.com/ThanhImmortal/Apeiron.git)
