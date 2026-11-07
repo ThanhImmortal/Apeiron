@@ -790,8 +790,12 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                             // Foreground Content
                             AnimatedVisibility(
                                 visible = showUi,
-                                enter = fadeIn(animationSpec = tween(400, easing = easeOutSmooth)) +
-                                        slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(400, easing = easeOutSmooth)),
+                                enter = fadeIn(animationSpec = tween(350, easing = LinearOutSlowInEasing)) +
+                                        slideInVertically(
+                                            initialOffsetY = { it / 2 },
+                                            animationSpec = tween(350, easing = emphasizedDecelerate)
+                                        ),
+                                exit = fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing)),
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 Column(
