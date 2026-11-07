@@ -956,6 +956,18 @@ fun SuperVOOCChargingRingToCenter(
         }
     }
 
+    val ringLayers = remember {
+        listOf(
+            Pair(0.08f, Stroke(width = 36f, cap = StrokeCap.Round)),
+            Pair(0.12f, Stroke(width = 32f, cap = StrokeCap.Round)),
+            Pair(0.20f, Stroke(width = 28f, cap = StrokeCap.Round)),
+            Pair(0.30f, Stroke(width = 24f, cap = StrokeCap.Round)),
+            Pair(0.45f, Stroke(width = 20f, cap = StrokeCap.Round)),
+            Pair(0.90f, Stroke(width = 16f, cap = StrokeCap.Round)),
+            Pair(0.90f, Stroke(width = 12f, cap = StrokeCap.Round))
+        )
+    }
+
     Box(
         modifier = Modifier.fillMaxWidth(0.78f).aspectRatio(1f),
         contentAlignment = Alignment.Center
@@ -966,24 +978,18 @@ fun SuperVOOCChargingRingToCenter(
             val ringRadius = (size.width / 2f) * 0.82f
 
             // Clean 3D Multi-layer Ambient Glow Ring
-            for (w in 36 downTo 12 step 4) {
-                val alpha = when (w) {
-                    36 -> 0.08f
-                    32 -> 0.12f
-                    28 -> 0.20f
-                    24 -> 0.30f
-                    20 -> 0.45f
-                    else -> 0.9f
-                }
-                val diameter = ringRadius * 2f
+            val diameter = ringRadius * 2f
+            val topLeftOffset = Offset(centerX - ringRadius, centerY - ringRadius)
+            val ringSize = Size(diameter, diameter)
+            ringLayers.forEach { (alpha, strokeStyle) ->
                 drawArc(
                     color = accentColor.copy(alpha = alpha),
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
-                    topLeft = Offset(centerX - ringRadius, centerY - ringRadius),
-                    size = Size(diameter, diameter),
-                    style = Stroke(width = w.toFloat(), cap = StrokeCap.Round)
+                    topLeft = topLeftOffset,
+                    size = ringSize,
+                    style = strokeStyle
                 )
             }
 

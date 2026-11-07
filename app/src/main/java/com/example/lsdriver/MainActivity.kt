@@ -335,7 +335,6 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
                     popupCardHeight = popupCardHeight,
                     onPopupCardHeightChange = { newHeight ->
                         popupCardHeight = newHeight
-                        prefs.edit().putInt("popup_card_height", newHeight).apply()
                     },
                     themeMode = themeMode,
                     onThemeModeChange = { newMode ->
@@ -845,96 +844,33 @@ fun PopupMediaTab(
         }
 
         // Compact Framing Card
-        ExpandableCard(title = if (isEnglish) "Size & Position" else "Kích thước và vị trí", initialExpanded = false) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                    Text(text = "Zoom: ${String.format(Locale.getDefault(), "%.2f", stagedZoom)}x", fontSize = 12.sp)
-                    Slider(
-                        value = stagedZoom,
-                        onValueChange = { stagedZoom = it },
-                        valueRange = 0.5f..5.0f,
-                        modifier = Modifier.height(28.dp)
-                    )
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                    Text(text = "Offset X: ${stagedOffsetX.toInt()}px", fontSize = 12.sp)
-                    Slider(
-                        value = stagedOffsetX,
-                        onValueChange = { stagedOffsetX = it },
-                        valueRange = -2500f..2500f,
-                        modifier = Modifier.height(28.dp)
-                    )
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                    Text(text = "Offset Y: ${stagedOffsetY.toInt()}px", fontSize = 12.sp)
-                    Slider(
-                        value = stagedOffsetY,
-                        onValueChange = { stagedOffsetY = it },
-                        valueRange = -2500f..2500f,
-                        modifier = Modifier.height(28.dp)
-                    )
-                }
-
-                Text(
-                    text = if (isEnglish) "Reset Framing" else "Đặt lại Khung hình",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .clip(RoundedCornerShape(4.dp))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            stagedZoom = 1.0f
-                            stagedOffsetX = 0f
-                            stagedOffsetY = 0f
-                        }
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+        FramingSlidersCard(
+            isEnglish = isEnglish,
+            zoomProvider = { stagedZoom },
+            onZoomChange = { stagedZoom = it },
+            offsetXProvider = { stagedOffsetX },
+            onOffsetXChange = { stagedOffsetX = it },
+            offsetYProvider = { stagedOffsetY },
+            onOffsetYChange = { stagedOffsetY = it },
+            onResetFraming = {
+                stagedZoom = 1.0f
+                stagedOffsetX = 0f
+                stagedOffsetY = 0f
             }
-        }
+        )
 
         // Headset Audio Settings Card
-        ExpandableCard(title = if (isEnglish) "Headset Sound" else "Âm thanh tai nghe", initialExpanded = false) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isEnglish) "Enable sound on play" else "Bật âm thanh khi phát",
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp
-                    )
-                    Switch(
-                        checked = soundEnabled,
-                        onCheckedChange = onSoundEnabledChange
-                    )
-                }
-
-                if (soundEnabled) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = if (isEnglish) "Volume: ${(videoVolume * 100).toInt()}%" else "Âm lượng: ${(videoVolume * 100).toInt()}%",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Slider(
-                            value = videoVolume,
-                            onValueChange = onVolumeChange,
-                            valueRange = 0.0f..1.0f
-                        )
-                    }
-                }
-            }
-        }
+        AudioSettingsCard(
+            title = if (isEnglish) "Headset Sound" else "Âm thanh tai nghe",
+            soundEnabled = soundEnabled,
+            onSoundEnabledChange = onSoundEnabledChange,
+            volumeProvider = { videoVolume },
+            onVolumeChange = onVolumeChange,
+            onVolumeChangeFinished = {
+                prefs.edit().putFloat("video_volume", videoVolume).apply()
+            },
+            isEnglish = isEnglish
+        )
 
         Button(
             onClick = {
@@ -1419,58 +1355,20 @@ fun ChargingMediaTab(
         }
 
         // Compact Framing Card
-        ExpandableCard(title = if (isEnglish) "Size & Position" else "Kích thước và vị trí", initialExpanded = false) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                    Text(text = "Zoom: ${String.format(Locale.getDefault(), "%.2f", stagedZoom)}x", fontSize = 12.sp)
-                    Slider(
-                        value = stagedZoom,
-                        onValueChange = { stagedZoom = it },
-                        valueRange = 0.5f..5.0f,
-                        modifier = Modifier.height(28.dp)
-                    )
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                    Text(text = "Offset X: ${stagedOffsetX.toInt()}px", fontSize = 12.sp)
-                    Slider(
-                        value = stagedOffsetX,
-                        onValueChange = { stagedOffsetX = it },
-                        valueRange = -2500f..2500f,
-                        modifier = Modifier.height(28.dp)
-                    )
-                }
-
-                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                    Text(text = "Offset Y: ${stagedOffsetY.toInt()}px", fontSize = 12.sp)
-                    Slider(
-                        value = stagedOffsetY,
-                        onValueChange = { stagedOffsetY = it },
-                        valueRange = -2500f..2500f,
-                        modifier = Modifier.height(28.dp)
-                    )
-                }
-
-                Text(
-                    text = if (isEnglish) "Reset Framing" else "Đặt lại Khung hình",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .clip(RoundedCornerShape(4.dp))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            stagedZoom = 1.0f
-                            stagedOffsetX = 0f
-                            stagedOffsetY = 0f
-                        }
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+        FramingSlidersCard(
+            isEnglish = isEnglish,
+            zoomProvider = { stagedZoom },
+            onZoomChange = { stagedZoom = it },
+            offsetXProvider = { stagedOffsetX },
+            onOffsetXChange = { stagedOffsetX = it },
+            offsetYProvider = { stagedOffsetY },
+            onOffsetYChange = { stagedOffsetY = it },
+            onResetFraming = {
+                stagedZoom = 1.0f
+                stagedOffsetX = 0f
+                stagedOffsetY = 0f
             }
-        }
+        )
 
         // Telemetry Display Toggles Card
         ExpandableCard(title = if (isEnglish) "Charging Info" else "Thông tin sạc", initialExpanded = false) {
@@ -1555,42 +1453,17 @@ fun ChargingMediaTab(
         }
 
         // Charging Audio Settings Card
-        ExpandableCard(title = if (isEnglish) "Charging Sound" else "Âm thanh sạc", initialExpanded = false) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isEnglish) "Enable sound on play" else "Bật âm thanh khi phát",
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp
-                    )
-                    Switch(
-                        checked = soundEnabled,
-                        onCheckedChange = onSoundEnabledChange
-                    )
-                }
-
-                if (soundEnabled) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = if (isEnglish) "Volume: ${(videoVolume * 100).toInt()}%" else "Âm lượng: ${(videoVolume * 100).toInt()}%",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Slider(
-                            value = videoVolume,
-                            onValueChange = onVolumeChange,
-                            valueRange = 0.0f..1.0f
-                        )
-                    }
-                }
-            }
-        }
+        AudioSettingsCard(
+            title = if (isEnglish) "Charging Sound" else "Âm thanh sạc",
+            soundEnabled = soundEnabled,
+            onSoundEnabledChange = onSoundEnabledChange,
+            volumeProvider = { videoVolume },
+            onVolumeChange = onVolumeChange,
+            onVolumeChangeFinished = {
+                chargingPrefs.edit().putFloat("charging_volume", videoVolume).apply()
+            },
+            isEnglish = isEnglish
+        )
 
         Button(
             onClick = {
@@ -1705,6 +1578,121 @@ fun ExpandableCard(
                 Column {
                     Spacer(modifier = Modifier.height(14.dp))
                     content()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FramingSlidersCard(
+    isEnglish: Boolean,
+    zoomProvider: () -> Float,
+    onZoomChange: (Float) -> Unit,
+    offsetXProvider: () -> Float,
+    onOffsetXChange: (Float) -> Unit,
+    offsetYProvider: () -> Float,
+    onOffsetYChange: (Float) -> Unit,
+    onResetFraming: () -> Unit
+) {
+    ExpandableCard(title = if (isEnglish) "Size & Position" else "Kích thước và vị trí", initialExpanded = false) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            val zoom = zoomProvider()
+            val offX = offsetXProvider()
+            val offY = offsetYProvider()
+
+            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                Text(text = "Zoom: ${String.format(Locale.getDefault(), "%.2f", zoom)}x", fontSize = 12.sp)
+                Slider(
+                    value = zoom,
+                    onValueChange = onZoomChange,
+                    valueRange = 0.5f..5.0f,
+                    modifier = Modifier.height(28.dp)
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                Text(text = "Offset X: ${offX.toInt()}px", fontSize = 12.sp)
+                Slider(
+                    value = offX,
+                    onValueChange = onOffsetXChange,
+                    valueRange = -2500f..2500f,
+                    modifier = Modifier.height(28.dp)
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                Text(text = "Offset Y: ${offY.toInt()}px", fontSize = 12.sp)
+                Slider(
+                    value = offY,
+                    onValueChange = onOffsetYChange,
+                    valueRange = -2500f..2500f,
+                    modifier = Modifier.height(28.dp)
+                )
+            }
+
+            Text(
+                text = if (isEnglish) "Reset Framing" else "Đặt lại Khung hình",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        onResetFraming()
+                    }
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun AudioSettingsCard(
+    title: String,
+    soundEnabled: Boolean,
+    onSoundEnabledChange: (Boolean) -> Unit,
+    volumeProvider: () -> Float,
+    onVolumeChange: (Float) -> Unit,
+    onVolumeChangeFinished: (() -> Unit)? = null,
+    isEnglish: Boolean
+) {
+    ExpandableCard(title = title, initialExpanded = false) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isEnglish) "Enable sound on play" else "Bật âm thanh khi phát",
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp
+                )
+                Switch(
+                    checked = soundEnabled,
+                    onCheckedChange = onSoundEnabledChange
+                )
+            }
+
+            if (soundEnabled) {
+                val vol = volumeProvider()
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = if (isEnglish) "Volume: ${(vol * 100).toInt()}%" else "Âm lượng: ${(vol * 100).toInt()}%",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Slider(
+                        value = vol,
+                        onValueChange = onVolumeChange,
+                        onValueChangeFinished = onVolumeChangeFinished,
+                        valueRange = 0.0f..1.0f
+                    )
                 }
             }
         }
@@ -2329,13 +2317,19 @@ fun SettingsPresetTab(
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null
-                                ) { onPopupCardHeightChange(440) }
+                                ) {
+                                    onPopupCardHeightChange(440)
+                                    prefs.edit().putInt("popup_card_height", 440).apply()
+                                }
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                     Slider(
                         value = popupCardHeight.toFloat(),
                         onValueChange = { newVal -> onPopupCardHeightChange(newVal.toInt()) },
+                        onValueChangeFinished = {
+                            prefs.edit().putInt("popup_card_height", popupCardHeight).apply()
+                        },
                         valueRange = 300f..600f,
                         modifier = Modifier.height(28.dp)
                     )
@@ -2374,9 +2368,10 @@ fun SettingsPresetTab(
                     Slider(
                         value = if (popupCardWidth > 0) popupCardWidth.toFloat() else 390f,
                         onValueChange = { newVal ->
-                            val intVal = newVal.toInt()
-                            popupCardWidth = intVal
-                            prefs.edit().putInt("popup_card_width", intVal).apply()
+                            popupCardWidth = newVal.toInt()
+                        },
+                        onValueChangeFinished = {
+                            prefs.edit().putInt("popup_card_width", popupCardWidth).apply()
                         },
                         valueRange = 280f..410f,
                         modifier = Modifier.height(28.dp)
