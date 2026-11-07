@@ -79,6 +79,7 @@ import coil.size.Size
 import kotlinx.coroutines.*
 import kotlin.math.roundToInt
 import java.io.File
+import androidx.compose.foundation.border
 
 @UnstableApi
 class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {

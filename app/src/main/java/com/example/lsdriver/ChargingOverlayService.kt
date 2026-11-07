@@ -91,6 +91,7 @@ import kotlin.math.roundToInt
 import java.io.File
 import java.util.Locale
 import kotlin.random.Random
+import androidx.compose.foundation.border
 
 @UnstableApi
 class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner {
