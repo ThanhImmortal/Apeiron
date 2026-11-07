@@ -125,6 +125,33 @@ fun copyUriToInternalStorage(context: Context, uri: Uri, fileName: String): File
     }
 }
 
+fun copyFileOrUri(context: Context, sourceUriString: String, destFile: File): Boolean {
+    if (sourceUriString.isEmpty()) return false
+    return try {
+        val uri = Uri.parse(sourceUriString)
+        if (uri.scheme == "file" || sourceUriString.startsWith("/")) {
+            val path = if (uri.scheme == "file") uri.path ?: "" else sourceUriString
+            val srcFile = File(path)
+            if (srcFile.exists()) {
+                if (srcFile.canonicalPath == destFile.canonicalPath) return true
+                srcFile.copyTo(destFile, overwrite = true)
+                return true
+            }
+        }
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return false
+        val outputStream = FileOutputStream(destFile)
+        inputStream.use { input ->
+            outputStream.use { output ->
+                input.copyTo(output)
+            }
+        }
+        true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
+    }
+}
+
 fun tr(lang: String, vi: String, en: String, zh: String): String {
     return when (lang) {
         "zh" -> zh
@@ -145,6 +172,7 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
         mutableStateOf(prefs.getString("app_language", "vi") ?: "vi")
     }
     val isEnglish = appLanguage == "en"
+    var presetLoadKey by remember { mutableIntStateOf(0) }
 
     // TAB NAVIGATION BACKSTACK HISTORY (Back Gesture / Back Button Memory)
     val tabBackStack = remember { mutableStateListOf(0) }
@@ -312,6 +340,7 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
                     videoVolume = videoVolume,
                     appLanguage = appLanguage,
                     isEnglish = isEnglish,
+                    presetLoadKey = presetLoadKey,
                     hasOverlayPermission = hasOverlayPermission,
                     onSoundEnabledChange = {
                         soundEnabled = it
@@ -338,6 +367,7 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
                     videoVolume = chargingVolume,
                     appLanguage = appLanguage,
                     isEnglish = isEnglish,
+                    presetLoadKey = presetLoadKey,
                     onSoundEnabledChange = {
                         chargingSoundEnabled = it
                         chargingPrefs.edit().putBoolean("charging_sound_enabled", it).apply()
@@ -378,6 +408,7 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
                         videoVolume = prefs.getFloat("video_volume", 0.5f)
                         chargingSoundEnabled = chargingPrefs.getBoolean("charging_sound_enabled", false)
                         chargingVolume = chargingPrefs.getFloat("charging_volume", 0.5f)
+                        presetLoadKey++
                     },
                     onOverlayPermissionClick = {
                         val intent = Intent(
@@ -404,6 +435,7 @@ fun PopupMediaTab(
     videoVolume: Float,
     appLanguage: String = "vi",
     isEnglish: Boolean = appLanguage == "en",
+    presetLoadKey: Int = 0,
     hasOverlayPermission: Boolean,
     onSoundEnabledChange: (Boolean) -> Unit,
     onVolumeChange: (Float) -> Unit,
@@ -480,11 +512,11 @@ fun PopupMediaTab(
     }
 
     // Direct Pre-populated State to eliminate Frame 1 empty state flicker!
-    var stagedUri by remember(initialMediaUri) { mutableStateOf(initialMediaUri.ifEmpty { prefs.getString("custom_media_uri", "") ?: "" }) }
-    var stagedType by remember { mutableStateOf(prefs.getString("custom_media_type", "image") ?: "image") }
-    var stagedZoom by remember { mutableFloatStateOf(prefs.getFloat("image_zoom", 1.0f)) }
-    var stagedOffsetX by remember { mutableFloatStateOf(prefs.getFloat("image_offset_x", 0f)) }
-    var stagedOffsetY by remember { mutableFloatStateOf(prefs.getFloat("image_offset_y", 0f)) }
+    var stagedUri by remember(initialMediaUri, presetLoadKey) { mutableStateOf(initialMediaUri.ifEmpty { prefs.getString("custom_media_uri", "") ?: "" }) }
+    var stagedType by remember(initialMediaUri, presetLoadKey) { mutableStateOf(prefs.getString("custom_media_type", "image") ?: "image") }
+    var stagedZoom by remember(initialMediaUri, presetLoadKey) { mutableFloatStateOf(prefs.getFloat("image_zoom", 1.0f)) }
+    var stagedOffsetX by remember(initialMediaUri, presetLoadKey) { mutableFloatStateOf(prefs.getFloat("image_offset_x", 0f)) }
+    var stagedOffsetY by remember(initialMediaUri, presetLoadKey) { mutableFloatStateOf(prefs.getFloat("image_offset_y", 0f)) }
     
     // DEFAULT IS STOPPED/PAUSED! Only plays when user taps "Phát"!
     var isPlaying by remember { mutableStateOf(false) }
@@ -942,6 +974,7 @@ fun ChargingMediaTab(
     videoVolume: Float,
     appLanguage: String = "vi",
     isEnglish: Boolean = appLanguage == "en",
+    presetLoadKey: Int = 0,
     onSoundEnabledChange: (Boolean) -> Unit,
     onVolumeChange: (Float) -> Unit
 ) {
@@ -1017,11 +1050,11 @@ fun ChargingMediaTab(
     }
 
     // Direct Pre-populated State to eliminate Frame 1 empty state flicker!
-    var stagedUri by remember(initialMediaUri) { mutableStateOf(initialMediaUri.ifEmpty { chargingPrefs.getString("charging_media_uri", "") ?: "" }) }
-    var stagedType by remember { mutableStateOf(chargingPrefs.getString("custom_media_type", "image") ?: "image") }
-    var stagedZoom by remember { mutableFloatStateOf(chargingPrefs.getFloat("charging_zoom", 1.0f)) }
-    var stagedOffsetX by remember { mutableFloatStateOf(chargingPrefs.getFloat("charging_offset_x", 0f)) }
-    var stagedOffsetY by remember { mutableFloatStateOf(chargingPrefs.getFloat("charging_offset_y", 0f)) }
+    var stagedUri by remember(initialMediaUri, presetLoadKey) { mutableStateOf(initialMediaUri.ifEmpty { chargingPrefs.getString("charging_media_uri", "") ?: "" }) }
+    var stagedType by remember(initialMediaUri, presetLoadKey) { mutableStateOf(chargingPrefs.getString("custom_media_type", "image") ?: "image") }
+    var stagedZoom by remember(initialMediaUri, presetLoadKey) { mutableFloatStateOf(chargingPrefs.getFloat("charging_zoom", 1.0f)) }
+    var stagedOffsetX by remember(initialMediaUri, presetLoadKey) { mutableFloatStateOf(chargingPrefs.getFloat("charging_offset_x", 0f)) }
+    var stagedOffsetY by remember(initialMediaUri, presetLoadKey) { mutableFloatStateOf(chargingPrefs.getFloat("charging_offset_y", 0f)) }
     
     // DEFAULT IS STOPPED/PAUSED! Only plays when user taps "Phát"!
     var isPlaying by remember { mutableStateOf(false) }
@@ -1072,11 +1105,11 @@ fun ChargingMediaTab(
         )
     }
 
-    var showWattage by remember { mutableStateOf(chargingPrefs.getBoolean("show_wattage", true)) }
-    var showTemp by remember { mutableStateOf(chargingPrefs.getBoolean("show_temp", true)) }
-    var showBattery by remember { mutableStateOf(chargingPrefs.getBoolean("show_battery", true)) }
-    var showVoltage by remember { mutableStateOf(chargingPrefs.getBoolean("show_voltage", true)) }
-    var showParticles by remember { mutableStateOf(chargingPrefs.getBoolean("show_charging_particles", true)) }
+    var showWattage by remember(presetLoadKey) { mutableStateOf(chargingPrefs.getBoolean("show_wattage", true)) }
+    var showTemp by remember(presetLoadKey) { mutableStateOf(chargingPrefs.getBoolean("show_temp", true)) }
+    var showBattery by remember(presetLoadKey) { mutableStateOf(chargingPrefs.getBoolean("show_battery", true)) }
+    var showVoltage by remember(presetLoadKey) { mutableStateOf(chargingPrefs.getBoolean("show_voltage", true)) }
+    var showParticles by remember(presetLoadKey) { mutableStateOf(chargingPrefs.getBoolean("show_charging_particles", true)) }
 
     val imageLoader = remember(context) {
         ImageLoader.Builder(context)
@@ -2364,7 +2397,7 @@ fun SettingsPresetTab(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = tr(appLanguage, "HƯỚNG DẪN DUY TRÌ HOẠT ĐỘNG NGẦM", "BACKGROUND RUNTIME GUIDE", "后台常驻与保活指南"),
+                    text = tr(appLanguage, "Hướng dẫn", "Guide", "指南"),
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -2379,9 +2412,9 @@ fun SettingsPresetTab(
                     Text(
                         text = tr(
                             appLanguage,
-                            "Lưu ý: Tùy thuộc vào từng dòng máy (Xiaomi / HyperOS, Samsung / One UI, OPPO / ColorOS, Vivo...), tên gọi và vị trí các mục cài đặt có thể sẽ khác nhau.",
-                            "Note: Depending on your device brand and OS skin (Samsung, Xiaomi, OPPO, Vivo...), setting names and locations may vary slightly.",
-                            "提示：受不同手机品牌（小米 HyperOS/MIUI、三星 One UI、OPPO ColorOS、vivo OriginOS 等）系统影响，各设置项名称及位置可能略有差异。"
+                            "Lưu ý: Tùy thuộc vào từng dòng máy (Xiaomi, Samsung, OPPO, Vivo...), tên gọi và vị trí các mục cài đặt có thể sẽ khác nhau.",
+                            "Note: Depending on your device brand (Samsung, Xiaomi, OPPO, Vivo...), setting names and locations may vary slightly.",
+                            "提示：受不同手机品牌（小米、三星、OPPO、vivo 等）影响，各设置项名称及位置可能略有差异。"
                         ),
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Medium,
@@ -2430,9 +2463,9 @@ fun SettingsPresetTab(
         // 1. Color Customization Card
         ExpandableCard(title = tr(appLanguage, "Màu sắc Pop-up", "Pop-up Colors", "弹窗颜色设置"), initialExpanded = false) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                var headsetColor by remember { mutableStateOf(prefs.getString("headset_popup_color", "blue") ?: "blue") }
-                var chargingColor by remember { mutableStateOf(chargingPrefs.getString("charging_popup_color", "cyan") ?: "cyan") }
-                var chargingRingColor by remember { mutableStateOf(chargingPrefs.getString("charging_ring_color", "cyan") ?: "cyan") }
+                var headsetColor by remember(refreshKey) { mutableStateOf(prefs.getString("headset_popup_color", "blue") ?: "blue") }
+                var chargingColor by remember(refreshKey) { mutableStateOf(chargingPrefs.getString("charging_popup_color", "cyan") ?: "cyan") }
+                var chargingRingColor by remember(refreshKey) { mutableStateOf(chargingPrefs.getString("charging_ring_color", "cyan") ?: "cyan") }
                 
                 var showHeadsetPalette by remember { mutableStateOf(false) }
                 var showChargingPalette by remember { mutableStateOf(false) }
@@ -2518,8 +2551,8 @@ fun SettingsPresetTab(
         // Background Color Card - UNIFIED SEAMLESS SEGMENTED SELECTOR!
         ExpandableCard(title = tr(appLanguage, "Màu nền Pop-up", "Pop-up Background", "弹窗背景颜色")) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                var bgStyle by remember { mutableStateOf(prefs.getString("popup_bg_style", "default") ?: "default") }
-                var customBgColor by remember { mutableStateOf(prefs.getString("popup_bg_color", "") ?: "") }
+                var bgStyle by remember(refreshKey) { mutableStateOf(prefs.getString("popup_bg_style", "default") ?: "default") }
+                var customBgColor by remember(refreshKey) { mutableStateOf(prefs.getString("popup_bg_color", "") ?: "") }
                 var showBgPalette by remember { mutableStateOf(false) }
 
                 Text(
@@ -2573,7 +2606,7 @@ fun SettingsPresetTab(
         }
 
         // 2. App Theme, Language & Master Switches Card - UNIFIED SEAMLESS SEGMENTED SELECTORS!
-        ExpandableCard(title = tr(appLanguage, "Giao diện và bật tắt", "App Theme & Language", "界面外观与开关")) {
+        ExpandableCard(title = tr(appLanguage, "Giao diện, ngôn ngữ", "Theme & Language", "界面与语言")) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = tr(appLanguage, "Ngôn ngữ giao diện", "App Language", "界面语言"),
@@ -2675,7 +2708,7 @@ fun SettingsPresetTab(
 
         // 3. Multi-slot Presets Card
         ExpandableCard(title = tr(appLanguage, "Quản lý Preset", "Preset Manager", "预设配置管理")) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 for (slot in 1..3) {
                     val slotExists = remember(refreshKey) { prefs.getBoolean("preset_${slot}_exists", false) }
                     Row(
@@ -2689,36 +2722,78 @@ fun SettingsPresetTab(
                             fontWeight = FontWeight.Medium,
                             maxLines = 1
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Button(
                                 onClick = {
+                                    val currentHeadsetUri = prefs.getString("custom_media_uri", "") ?: ""
+                                    val currentHeadsetType = prefs.getString("custom_media_type", "image") ?: "image"
+                                    val savedHeadsetFilePath = if (currentHeadsetUri.isNotEmpty()) {
+                                        val hExt = if (currentHeadsetType == "video") "mp4" else "jpg"
+                                        val destFile = File(context.filesDir, "preset_${slot}_headset.$hExt")
+                                        if (copyFileOrUri(context, currentHeadsetUri, destFile)) {
+                                            destFile.absolutePath
+                                        } else ""
+                                    } else ""
+
+                                    val currentChargingUri = chargingPrefs.getString("charging_media_uri", "") ?: ""
+                                    val currentChargingType = chargingPrefs.getString("custom_media_type", "image") ?: "image"
+                                    val isChargingVideo = chargingPrefs.getBoolean("is_charging_video", currentChargingType == "video")
+                                    val savedChargingFilePath = if (currentChargingUri.isNotEmpty()) {
+                                        val cExt = if (isChargingVideo) "mp4" else "jpg"
+                                        val destFile = File(context.filesDir, "preset_${slot}_charging.$cExt")
+                                        if (copyFileOrUri(context, currentChargingUri, destFile)) {
+                                            destFile.absolutePath
+                                        } else ""
+                                    } else ""
+
                                     prefs.edit()
                                         .putBoolean("preset_${slot}_exists", true)
-                                        .putString("preset_${slot}_headset_uri", prefs.getString("custom_media_uri", ""))
-                                        .putString("preset_${slot}_device_name", deviceName)
+                                        .putString("preset_${slot}_headset_file", savedHeadsetFilePath)
+                                        .putString("preset_${slot}_headset_type", currentHeadsetType)
+                                        .putString("preset_${slot}_device_name", prefs.getString("device_custom_name", deviceName) ?: deviceName)
                                         .putFloat("preset_${slot}_zoom", prefs.getFloat("image_zoom", 1.0f))
                                         .putFloat("preset_${slot}_offset_x", prefs.getFloat("image_offset_x", 0f))
                                         .putFloat("preset_${slot}_offset_y", prefs.getFloat("image_offset_y", 0f))
+                                        .putFloat("preset_${slot}_offset_x_norm", prefs.getFloat("image_offset_x_normalized", 0f))
+                                        .putFloat("preset_${slot}_offset_y_norm", prefs.getFloat("image_offset_y_normalized", 0f))
                                         .putBoolean("preset_${slot}_sound", prefs.getBoolean("video_sound_enabled", false))
                                         .putFloat("preset_${slot}_volume", prefs.getFloat("video_volume", 0.5f))
+                                        .putString("preset_${slot}_headset_color", prefs.getString("headset_popup_color", "blue") ?: "blue")
+                                        .putInt("preset_${slot}_card_height", popupCardHeight)
+                                        .putInt("preset_${slot}_card_width", prefs.getInt("popup_card_width", 0))
+                                        .putString("preset_${slot}_bg_style", prefs.getString("popup_bg_style", "default") ?: "default")
+                                        .putString("preset_${slot}_bg_color", prefs.getString("popup_bg_color", "") ?: "")
                                         .apply()
 
                                     chargingPrefs.edit()
-                                        .putString("preset_${slot}_charging_uri", chargingPrefs.getString("charging_media_uri", ""))
+                                        .putString("preset_${slot}_charging_file", savedChargingFilePath)
+                                        .putString("preset_${slot}_charging_type", currentChargingType)
+                                        .putBoolean("preset_${slot}_is_charging_video", isChargingVideo)
+                                        .putFloat("preset_${slot}_charging_zoom", chargingPrefs.getFloat("charging_zoom", 1.0f))
+                                        .putFloat("preset_${slot}_charging_offset_x", chargingPrefs.getFloat("charging_offset_x", 0f))
+                                        .putFloat("preset_${slot}_charging_offset_y", chargingPrefs.getFloat("charging_offset_y", 0f))
+                                        .putFloat("preset_${slot}_charging_offset_x_norm", chargingPrefs.getFloat("charging_offset_x_normalized", 0f))
+                                        .putFloat("preset_${slot}_charging_offset_y_norm", chargingPrefs.getFloat("charging_offset_y_normalized", 0f))
                                         .putBoolean("preset_${slot}_charging_sound", chargingPrefs.getBoolean("charging_sound_enabled", false))
                                         .putFloat("preset_${slot}_charging_volume", chargingPrefs.getFloat("charging_volume", 0.5f))
+                                        .putString("preset_${slot}_charging_color", chargingPrefs.getString("charging_popup_color", "cyan") ?: "cyan")
+                                        .putString("preset_${slot}_charging_ring_color", chargingPrefs.getString("charging_ring_color", "cyan") ?: "cyan")
                                         .putBoolean("preset_${slot}_show_wattage", chargingPrefs.getBoolean("show_wattage", true))
                                         .putBoolean("preset_${slot}_show_temp", chargingPrefs.getBoolean("show_temp", true))
                                         .putBoolean("preset_${slot}_show_battery", chargingPrefs.getBoolean("show_battery", true))
                                         .putBoolean("preset_${slot}_show_voltage", chargingPrefs.getBoolean("show_voltage", true))
                                         .putBoolean("preset_${slot}_show_charging_particles", chargingPrefs.getBoolean("show_charging_particles", true))
-                                        .putString("preset_${slot}_charging_ring_color", chargingPrefs.getString("charging_ring_color", "cyan"))
                                         .apply()
 
+                                    Toast.makeText(context, tr(appLanguage, "Đã lưu Preset $slot thành công!", "Preset $slot saved successfully!", "已成功保存预设 $slot！"), Toast.LENGTH_SHORT).show()
                                     refreshKey++
                                 },
-                                modifier = Modifier.height(34.dp),
-                                shape = RoundedCornerShape(10.dp)
+                                modifier = Modifier.height(32.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                                shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text(tr(appLanguage, "Lưu", "Save", "保存"), fontSize = 11.sp, maxLines = 1)
                             }
@@ -2726,54 +2801,170 @@ fun SettingsPresetTab(
                             if (slotExists) {
                                 OutlinedButton(
                                     onClick = {
-                                        val hUri = prefs.getString("preset_${slot}_headset_uri", "") ?: ""
+                                        val hFilePath = prefs.getString("preset_${slot}_headset_file", "") ?: ""
+                                        val hType = prefs.getString("preset_${slot}_headset_type", "image") ?: "image"
+                                        val newHeadsetUri = if (hFilePath.isNotEmpty() && File(hFilePath).exists()) {
+                                            val hExt = if (hType == "video") "mp4" else "jpg"
+                                            val destFile = File(context.filesDir, "headset_media_file.$hExt")
+                                            if (copyFileOrUri(context, hFilePath, destFile)) {
+                                                Uri.fromFile(destFile).toString()
+                                            } else {
+                                                Uri.fromFile(File(hFilePath)).toString()
+                                            }
+                                        } else {
+                                            ""
+                                        }
+
                                         val dName = prefs.getString("preset_${slot}_device_name", "Audio USB") ?: "Audio USB"
-                                        val zoom = prefs.getFloat("preset_${slot}_zoom", 1.0f)
-                                        val offX = prefs.getFloat("preset_${slot}_offset_x", 0f)
-                                        val offY = prefs.getFloat("preset_${slot}_offset_y", 0f)
+                                        val hZoom = prefs.getFloat("preset_${slot}_zoom", 1.0f)
+                                        val hOffX = prefs.getFloat("preset_${slot}_offset_x", 0f)
+                                        val hOffY = prefs.getFloat("preset_${slot}_offset_y", 0f)
+                                        val hOffXNorm = prefs.getFloat("preset_${slot}_offset_x_norm", 0f)
+                                        val hOffYNorm = prefs.getFloat("preset_${slot}_offset_y_norm", 0f)
                                         val hSound = prefs.getBoolean("preset_${slot}_sound", false)
                                         val hVol = prefs.getFloat("preset_${slot}_volume", 0.5f)
+                                        val hColor = prefs.getString("preset_${slot}_headset_color", "blue") ?: "blue"
+                                        val savedCardHeight = prefs.getInt("preset_${slot}_card_height", 440)
+                                        val savedCardWidth = prefs.getInt("preset_${slot}_card_width", 0)
+                                        val savedBgStyle = prefs.getString("preset_${slot}_bg_style", "default") ?: "default"
+                                        val savedBgColor = prefs.getString("preset_${slot}_bg_color", "") ?: ""
 
                                         prefs.edit()
-                                            .putString("custom_media_uri", hUri)
+                                            .putString("custom_media_uri", newHeadsetUri)
+                                            .putString("custom_media_type", hType)
                                             .putString("device_custom_name", dName)
-                                            .putFloat("image_zoom", zoom)
-                                            .putFloat("image_offset_x", offX)
-                                            .putFloat("image_offset_y", offY)
+                                            .putFloat("image_zoom", hZoom)
+                                            .putFloat("image_offset_x", hOffX)
+                                            .putFloat("image_offset_y", hOffY)
+                                            .putFloat("image_offset_x_normalized", hOffXNorm)
+                                            .putFloat("image_offset_y_normalized", hOffYNorm)
                                             .putBoolean("video_sound_enabled", hSound)
                                             .putFloat("video_volume", hVol)
+                                            .putString("headset_popup_color", hColor)
+                                            .putInt("popup_card_height", savedCardHeight)
+                                            .putInt("popup_card_width", savedCardWidth)
+                                            .putString("popup_bg_style", savedBgStyle)
+                                            .putString("popup_bg_color", savedBgColor)
                                             .apply()
 
-                                        val cUri = chargingPrefs.getString("preset_${slot}_charging_uri", "") ?: ""
+                                        val cFilePath = chargingPrefs.getString("preset_${slot}_charging_file", "") ?: ""
+                                        val cType = chargingPrefs.getString("preset_${slot}_charging_type", "image") ?: "image"
+                                        val isCVideo = chargingPrefs.getBoolean("preset_${slot}_is_charging_video", cType == "video")
+                                        val newChargingUri = if (cFilePath.isNotEmpty() && File(cFilePath).exists()) {
+                                            val cExt = if (isCVideo) "mp4" else "jpg"
+                                            val destFile = File(context.filesDir, "charging_media_file.$cExt")
+                                            if (copyFileOrUri(context, cFilePath, destFile)) {
+                                                Uri.fromFile(destFile).toString()
+                                            } else {
+                                                Uri.fromFile(File(cFilePath)).toString()
+                                            }
+                                        } else {
+                                            ""
+                                        }
+
+                                        val cZoom = chargingPrefs.getFloat("preset_${slot}_charging_zoom", 1.0f)
+                                        val cOffX = chargingPrefs.getFloat("preset_${slot}_charging_offset_x", 0f)
+                                        val cOffY = chargingPrefs.getFloat("preset_${slot}_charging_offset_y", 0f)
+                                        val cOffXNorm = chargingPrefs.getFloat("preset_${slot}_charging_offset_x_norm", 0f)
+                                        val cOffYNorm = chargingPrefs.getFloat("preset_${slot}_charging_offset_y_norm", 0f)
                                         val cSound = chargingPrefs.getBoolean("preset_${slot}_charging_sound", false)
                                         val cVol = chargingPrefs.getFloat("preset_${slot}_charging_volume", 0.5f)
+                                        val cColor = chargingPrefs.getString("preset_${slot}_charging_color", "cyan") ?: "cyan"
+                                        val cRingColor = chargingPrefs.getString("preset_${slot}_charging_ring_color", "cyan") ?: "cyan"
                                         val sW = chargingPrefs.getBoolean("preset_${slot}_show_wattage", true)
                                         val sT = chargingPrefs.getBoolean("preset_${slot}_show_temp", true)
                                         val sB = chargingPrefs.getBoolean("preset_${slot}_show_battery", true)
                                         val sV = chargingPrefs.getBoolean("preset_${slot}_show_voltage", true)
                                         val sP = chargingPrefs.getBoolean("preset_${slot}_show_charging_particles", true)
-                                        val cRingColor = chargingPrefs.getString("preset_${slot}_charging_ring_color", "cyan") ?: "cyan"
 
                                         chargingPrefs.edit()
-                                            .putString("charging_media_uri", cUri)
+                                            .putString("charging_media_uri", newChargingUri)
+                                            .putString("custom_media_type", cType)
+                                            .putBoolean("is_charging_video", isCVideo)
+                                            .putFloat("charging_zoom", cZoom)
+                                            .putFloat("charging_offset_x", cOffX)
+                                            .putFloat("charging_offset_y", cOffY)
+                                            .putFloat("charging_offset_x_normalized", cOffXNorm)
+                                            .putFloat("charging_offset_y_normalized", cOffYNorm)
                                             .putBoolean("charging_sound_enabled", cSound)
                                             .putFloat("charging_volume", cVol)
+                                            .putString("charging_popup_color", cColor)
+                                            .putString("charging_ring_color", cRingColor)
                                             .putBoolean("show_wattage", sW)
                                             .putBoolean("show_temp", sT)
                                             .putBoolean("show_battery", sB)
                                             .putBoolean("show_voltage", sV)
                                             .putBoolean("show_charging_particles", sP)
-                                            .putString("charging_ring_color", cRingColor)
                                             .apply()
 
                                         onDeviceNameChange(dName)
+                                        onPopupCardHeightChange(savedCardHeight)
                                         onPresetLoaded()
                                         refreshKey++
+                                        Toast.makeText(context, tr(appLanguage, "Đã tải Preset $slot thành công!", "Preset $slot loaded successfully!", "已成功载入预设 $slot！"), Toast.LENGTH_SHORT).show()
                                     },
-                                    modifier = Modifier.height(34.dp),
-                                    shape = RoundedCornerShape(10.dp)
+                                    modifier = Modifier.height(32.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                                    shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text(tr(appLanguage, "Tải", "Load", "载入"), fontSize = 11.sp, maxLines = 1)
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        val hFilePath = prefs.getString("preset_${slot}_headset_file", "") ?: ""
+                                        if (hFilePath.isNotEmpty()) File(hFilePath).delete()
+                                        val cFilePath = chargingPrefs.getString("preset_${slot}_charging_file", "") ?: ""
+                                        if (cFilePath.isNotEmpty()) File(cFilePath).delete()
+
+                                        prefs.edit()
+                                            .remove("preset_${slot}_exists")
+                                            .remove("preset_${slot}_headset_file")
+                                            .remove("preset_${slot}_headset_type")
+                                            .remove("preset_${slot}_device_name")
+                                            .remove("preset_${slot}_zoom")
+                                            .remove("preset_${slot}_offset_x")
+                                            .remove("preset_${slot}_offset_y")
+                                            .remove("preset_${slot}_offset_x_norm")
+                                            .remove("preset_${slot}_offset_y_norm")
+                                            .remove("preset_${slot}_sound")
+                                            .remove("preset_${slot}_volume")
+                                            .remove("preset_${slot}_headset_color")
+                                            .remove("preset_${slot}_card_height")
+                                            .remove("preset_${slot}_card_width")
+                                            .remove("preset_${slot}_bg_style")
+                                            .remove("preset_${slot}_bg_color")
+                                            .apply()
+
+                                        chargingPrefs.edit()
+                                            .remove("preset_${slot}_charging_file")
+                                            .remove("preset_${slot}_charging_type")
+                                            .remove("preset_${slot}_is_charging_video")
+                                            .remove("preset_${slot}_charging_zoom")
+                                            .remove("preset_${slot}_charging_offset_x")
+                                            .remove("preset_${slot}_charging_offset_y")
+                                            .remove("preset_${slot}_charging_offset_x_norm")
+                                            .remove("preset_${slot}_charging_offset_y_norm")
+                                            .remove("preset_${slot}_charging_sound")
+                                            .remove("preset_${slot}_charging_volume")
+                                            .remove("preset_${slot}_charging_color")
+                                            .remove("preset_${slot}_charging_ring_color")
+                                            .remove("preset_${slot}_show_wattage")
+                                            .remove("preset_${slot}_show_temp")
+                                            .remove("preset_${slot}_show_battery")
+                                            .remove("preset_${slot}_show_voltage")
+                                            .remove("preset_${slot}_show_charging_particles")
+                                            .apply()
+
+                                        Toast.makeText(context, tr(appLanguage, "Đã xóa Preset $slot!", "Preset $slot deleted!", "已删除预设 $slot！"), Toast.LENGTH_SHORT).show()
+                                        refreshKey++
+                                    },
+                                    modifier = Modifier.height(32.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(tr(appLanguage, "Xóa", "Delete", "删除"), fontSize = 11.sp, maxLines = 1)
                                 }
                             }
                         }
@@ -2783,10 +2974,10 @@ fun SettingsPresetTab(
         }
 
         // 4. Device Name & Framing Card - NO TEXT CLIPPING ON RESET BUTTON!
-        ExpandableCard(title = tr(appLanguage, "Tên thiết bị và kích thước Pop-up", "Device Name & Card Dimensions", "设备名称与弹窗尺寸")) {
+        ExpandableCard(title = tr(appLanguage, "Thiết bị, kích thước", "Device & Dimensions", "设备与尺寸")) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(text = tr(appLanguage, "Tên thiết bị hiển thị", "Display Device Name", "显示设备名称"), fontWeight = FontWeight.Medium, fontSize = 13.sp, maxLines = 1)
-                var textState by remember(deviceName) { mutableStateOf(deviceName) }
+                var textState by remember(deviceName, refreshKey) { mutableStateOf(deviceName) }
                 OutlinedTextField(
                     value = textState,
                     onValueChange = { newVal ->
@@ -2835,7 +3026,7 @@ fun SettingsPresetTab(
                     )
                 }
 
-                var popupCardWidth by remember { mutableIntStateOf(prefs.getInt("popup_card_width", 0)) }
+                var popupCardWidth by remember(refreshKey) { mutableIntStateOf(prefs.getInt("popup_card_width", 0)) }
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
