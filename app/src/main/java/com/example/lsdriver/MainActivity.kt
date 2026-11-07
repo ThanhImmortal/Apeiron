@@ -23,12 +23,17 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1717,60 +1722,94 @@ data class PaletteColorItem(
     val hexString: String
 )
 
+fun colorToHsv(color: Color): FloatArray {
+    val hsv = FloatArray(3)
+    val colorInt = android.graphics.Color.argb(
+        (color.alpha * 255f).toInt().coerceIn(0, 255),
+        (color.red * 255f).toInt().coerceIn(0, 255),
+        (color.green * 255f).toInt().coerceIn(0, 255),
+        (color.blue * 255f).toInt().coerceIn(0, 255)
+    )
+    android.graphics.Color.colorToHSV(colorInt, hsv)
+    return hsv
+}
+
+fun hsvToColor(hue: Float, saturation: Float, value: Float): Color {
+    val colorInt = android.graphics.Color.HSVToColor(
+        floatArrayOf(
+            hue.coerceIn(0f, 360f),
+            saturation.coerceIn(0f, 1f),
+            value.coerceIn(0f, 1f)
+        )
+    )
+    return Color(colorInt)
+}
+
+fun colorToHex(color: Color): String {
+    val r = (color.red * 255f).toInt().coerceIn(0, 255)
+    val g = (color.green * 255f).toInt().coerceIn(0, 255)
+    val b = (color.blue * 255f).toInt().coerceIn(0, 255)
+    return String.format("#%02X%02X%02X", r, g, b)
+}
+
 val HarmoniousPaletteList = listOf(
-    // Group 1: Neutrals & Metallic
+    // Nhóm 1: Rực rỡ & Hiện đại (Material 3 Expressive)
+    PaletteColorItem(Color(0xFF2962FF), "Xanh dương rực", "#2962FF"),
+    PaletteColorItem(Color(0xFF00E5FF), "Xanh Cyan sáng", "#00E5FF"),
+    PaletteColorItem(Color(0xFF00BFA5), "Xanh ngọc (Teal)", "#00BFA5"),
+    PaletteColorItem(Color(0xFF00E676), "Xanh neon", "#00E676"),
+    PaletteColorItem(Color(0xFF4CAF50), "Xanh lá tươi", "#4CAF50"),
+    PaletteColorItem(Color(0xFFCDDC39), "Xanh Lime", "#CDDC39"),
+    PaletteColorItem(Color(0xFFFFD700), "Vàng ánh kim (Gold)", "#FFD700"),
+    PaletteColorItem(Color(0xFFFF9100), "Cam tươi", "#FF9100"),
+    PaletteColorItem(Color(0xFFFF3D00), "Đỏ cờ", "#FF3D00"),
+    PaletteColorItem(Color(0xFFC62828), "Đỏ sậm (Crimson)", "#C62828"),
+    PaletteColorItem(Color(0xFFFF4081), "Hồng tươi", "#FF4081"),
+    PaletteColorItem(Color(0xFFD81B60), "Hồng Magenta", "#D81B60"),
+    PaletteColorItem(Color(0xFF7C4DFF), "Tím rực", "#7C4DFF"),
+    PaletteColorItem(Color(0xFF3F51B5), "Xanh Indigo", "#3F51B5"),
+    PaletteColorItem(Color(0xFF1565C0), "Xanh Navy", "#1565C0"),
+    PaletteColorItem(Color(0xFF00ACC1), "Xanh ngọc bích", "#00ACC1"),
+
+    // Nhóm 2: Cyberpunk & Gaming Neon
+    PaletteColorItem(Color(0xFF39FF14), "Neon Lime", "#39FF14"),
+    PaletteColorItem(Color(0xFF00F0FF), "Laser Cyan", "#00F0FF"),
+    PaletteColorItem(Color(0xFFFF007F), "Hyper Pink", "#FF007F"),
+    PaletteColorItem(Color(0xFFBF00FF), "Electric Violet", "#BF00FF"),
+    PaletteColorItem(Color(0xFFFF5E00), "Plasma Orange", "#FF5E00"),
+    PaletteColorItem(Color(0xFFFFE600), "Reactor Yellow", "#FFE600"),
+    PaletteColorItem(Color(0xFF7B00FF), "Ultraviolet", "#7B00FF"),
+    PaletteColorItem(Color(0xFF00FF66), "Matrix Green", "#00FF66"),
+
+    // Nhóm 3: Pastel & Tinh tế (Soft Aesthetic)
+    PaletteColorItem(Color(0xFFFFB7B2), "Hồng phấn Sakura", "#FFB7B2"),
+    PaletteColorItem(Color(0xFFFFDAC1), "Kem đào (Peach)", "#FFDAC1"),
+    PaletteColorItem(Color(0xFFE2F0CB), "Vàng chanh dịu", "#E2F0CB"),
+    PaletteColorItem(Color(0xFFB5EAD7), "Bạc hà (Mint)", "#B5EAD7"),
+    PaletteColorItem(Color(0xFFC7CEEA), "Xanh baby sky", "#C7CEEA"),
+    PaletteColorItem(Color(0xFFE8D7F1), "Tím oải hương", "#E8D7F1"),
+    PaletteColorItem(Color(0xFFF7D6E0), "Hồng kẹo ngọt", "#F7D6E0"),
+    PaletteColorItem(Color(0xFFD8E2DC), "Khói xám sương", "#D8E2DC"),
+
+    // Nhóm 4: Kim loại & Đơn sắc (Metallic & Monochrome)
+    PaletteColorItem(Color(0xFFFFFFFF), "Trắng tinh khiết", "#FFFFFF"),
     PaletteColorItem(Color(0xFFE0E0E0), "Bạc kim (Silver)", "#E0E0E0"),
     PaletteColorItem(Color(0xFF9E9E9E), "Xám trung tính", "#9E9E9E"),
     PaletteColorItem(Color(0xFF607D8B), "Xám đá (Slate)", "#607D8B"),
-    PaletteColorItem(Color(0xFF000000), "Đen tuyền", "#000000"),
+    PaletteColorItem(Color(0xFF37474F), "Thép xám đậm", "#37474F"),
+    PaletteColorItem(Color(0xFF1E1E2C), "Đêm huyền bí (Midnight)", "#1E1E2C"),
+    PaletteColorItem(Color(0xFF121212), "Than chì (Carbon)", "#121212"),
+    PaletteColorItem(Color(0xFF000000), "Đen tuyền (OLED Black)", "#000000"),
 
-    // Group 2: Reds & Coral
-    PaletteColorItem(Color(0xFFFF3D00), "Đỏ tươi", "#FF3D00"),
-    PaletteColorItem(Color(0xFFC62828), "Đỏ sậm (Crimson)", "#C62828"),
-    PaletteColorItem(Color(0xFFFF5722), "Đỏ cam", "#FF5722"),
-    PaletteColorItem(Color(0xFFFF6F00), "San hô (Coral)", "#FF6F00"),
-
-    // Group 3: Oranges & Amber
-    PaletteColorItem(Color(0xFFFF9100), "Cam tươi", "#FF9100"),
-    PaletteColorItem(Color(0xFFFF9800), "Cam hổ phách", "#FF9800"),
-    PaletteColorItem(Color(0xFFFF8F00), "Hổ phách (Amber)", "#FF8F00"),
-    PaletteColorItem(Color(0xFFFFC107), "Cam vàng", "#FFC107"),
-
-    // Group 4: Golds & Yellows
-    PaletteColorItem(Color(0xFFFFD700), "Vàng Gold", "#FFD700"),
-    PaletteColorItem(Color(0xFFFFEB3B), "Vàng rực", "#FFEB3B"),
-    PaletteColorItem(Color(0xFFFFEE58), "Vàng chanh", "#FFEE58"),
-    PaletteColorItem(Color(0xFFCDDC39), "Xanh Lime", "#CDDC39"),
-
-    // Group 5: Greens & Teals
-    PaletteColorItem(Color(0xFF8BC34A), "Xanh nõn chuối", "#8BC34A"),
-    PaletteColorItem(Color(0xFF4CAF50), "Xanh lá tươi", "#4CAF50"),
-    PaletteColorItem(Color(0xFF00E676), "Xanh neon", "#00E676"),
-    PaletteColorItem(Color(0xFF00BFA5), "Xanh ngọc (Teal)", "#00BFA5"),
-
-    // Group 6: Cyan & Light Blues
-    PaletteColorItem(Color(0xFF00ACC1), "Xanh ngọc bích", "#00ACC1"),
-    PaletteColorItem(Color(0xFF00BCD4), "Xanh Cyan tươi", "#00BCD4"),
-    PaletteColorItem(Color(0xFF00E5FF), "Xanh Cyan sáng", "#00E5FF"),
-    PaletteColorItem(Color(0xFF03A9F4), "Xanh da trời", "#03A9F4"),
-
-    // Group 7: Blues & Indigo
-    PaletteColorItem(Color(0xFF2196F3), "Xanh lam", "#2196F3"),
-    PaletteColorItem(Color(0xFF2962FF), "Xanh dương rực", "#2962FF"),
-    PaletteColorItem(Color(0xFF1565C0), "Xanh Navy", "#1565C0"),
-    PaletteColorItem(Color(0xFF3F51B5), "Xanh Indigo", "#3F51B5"),
-
-    // Group 8: Purples & Magentas
-    PaletteColorItem(Color(0xFF673AB7), "Tím thạch anh", "#673AB7"),
-    PaletteColorItem(Color(0xFF7C4DFF), "Tím rực", "#7C4DFF"),
-    PaletteColorItem(Color(0xFF9C27B0), "Tím đậm", "#9C27B0"),
-    PaletteColorItem(Color(0xFFD81B60), "Magenta", "#D81B60"),
-
-    // Group 9: Pinks & Darks
-    PaletteColorItem(Color(0xFFFF4081), "Hồng tươi", "#FF4081"),
-    PaletteColorItem(Color(0xFFE91E63), "Hồng hoa sen", "#E91E63"),
-    PaletteColorItem(Color(0xFF795548), "Nâu ca cao", "#795548"),
-    PaletteColorItem(Color(0xFF1E1E2C), "Tối huyền bí (Midnight)", "#1E1E2C")
+    // Nhóm 5: Tự nhiên & Đất mộc (Morandi & Earthy)
+    PaletteColorItem(Color(0xFFC97A63), "Gạch đất nung", "#C97A63"),
+    PaletteColorItem(Color(0xFFC48B9F), "Hồng đất khô", "#C48B9F"),
+    PaletteColorItem(Color(0xFF9FAF90), "Xanh xô thơm (Sage)", "#9FAF90"),
+    PaletteColorItem(Color(0xFFD7C4B7), "Cát ấm (Sand)", "#D7C4B7"),
+    PaletteColorItem(Color(0xFF52796F), "Xanh rêu đá", "#52796F"),
+    PaletteColorItem(Color(0xFF5C4033), "Nâu cà phê", "#5C4033"),
+    PaletteColorItem(Color(0xFF795548), "Nâu cacao", "#795548"),
+    PaletteColorItem(Color(0xFFFFC107), "Vàng hổ phách", "#FFC107")
 )
 
 @Composable
@@ -1779,75 +1818,340 @@ fun ColorPaletteDialog(
     onDismiss: () -> Unit,
     onColorSelected: (PaletteColorItem) -> Unit
 ) {
-    var selectedItem by remember {
+    // 0: Spectrum mode (After Effects / Photoshop), 1: Preset Grid
+    var selectedMode by remember { mutableIntStateOf(0) }
+
+    val initialHsv = remember(initialColor) { colorToHsv(initialColor) }
+    var hue by remember { mutableFloatStateOf(initialHsv[0]) }
+    var saturation by remember { mutableFloatStateOf(initialHsv[1]) }
+    var value by remember { mutableFloatStateOf(initialHsv[2]) }
+
+    val currentColor = remember(hue, saturation, value) {
+        hsvToColor(hue, saturation, value)
+    }
+    val currentHex = remember(currentColor) {
+        colorToHex(currentColor)
+    }
+
+    var selectedPresetItem by remember {
         mutableStateOf(
             HarmoniousPaletteList.find { it.color == initialColor } ?: HarmoniousPaletteList.first()
         )
     }
 
+    val quickColors = remember {
+        listOf(
+            Color(0xFFFFFFFF), Color(0xFF000000), Color(0xFFFF1744), Color(0xFFFF9100),
+            Color(0xFFFFEA00), Color(0xFF00E676), Color(0xFF00E5FF), Color(0xFF2979FF),
+            Color(0xFFD500F9), Color(0xFFFF4081)
+        )
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Bảng màu", fontWeight = FontWeight.Bold) },
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Bảng chọn màu", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                
+                // Mode Switcher Tab
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val modeTitles = listOf("Dải màu (AE)", "Mẫu có sẵn")
+                    modeTitles.forEachIndexed { index, title ->
+                        val isSelected = selectedMode == index
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(32.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primary
+                                    else Color.Transparent
+                                )
+                                .clickable { selectedMode = index },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = title,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 380.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Color Preview Box with Selected Color Name & Hex Code!
-                Box(
+                // Live Color Compare & Hex Header
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(selectedItem.color),
-                    contentAlignment = Alignment.Center
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val isLightColor = (selectedItem.color.red * 0.299f + selectedItem.color.green * 0.587f + selectedItem.color.blue * 0.114f) > 0.6f
-                    Text(
-                        text = "${selectedItem.name} (${selectedItem.hexString})",
-                        color = if (isLightColor) Color.Black else Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Original Swatch
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(initialColor)
+                                .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+                        )
+                        Text("→", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        // New Selected Swatch
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(currentColor)
+                                .border(1.5.dp, Color.White, CircleShape)
+                        )
+                    }
+
+                    // Hex code pill
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = currentHex,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
-                Text(
-                    text = "Chạm vào ô màu để chọn:",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (selectedMode == 0) {
+                    // MODE 0: SPECTRUM MODE (After Effects 2D Saturation-Value + Rainbow Hue Slider)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // 2D Saturation & Value Box
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(140.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(hsvToColor(hue, 1f, 1f))
+                        ) {
+                            // Horizontal White Gradient (Saturation 0 -> 1)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(Color.White, Color.Transparent)
+                                        )
+                                    )
+                            )
+                            // Vertical Black Gradient (Value 1 -> 0)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color.Transparent, Color.Black)
+                                        )
+                                    )
+                            )
+                            // Interactive Canvas Touch & Crosshair
+                            Canvas(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .pointerInput(Unit) {
+                                        awaitEachGesture {
+                                            val down = awaitFirstDown(requireUnconsumed = false)
+                                            val width = size.width.toFloat().coerceAtLeast(1f)
+                                            val height = size.height.toFloat().coerceAtLeast(1f)
+                                            saturation = (down.position.x / width).coerceIn(0f, 1f)
+                                            value = (1f - down.position.y / height).coerceIn(0f, 1f)
+                                            while (true) {
+                                                val event = awaitPointerEvent()
+                                                val change = event.changes.firstOrNull() ?: break
+                                                if (!change.pressed) break
+                                                change.consume()
+                                                saturation = (change.position.x / width).coerceIn(0f, 1f)
+                                                value = (1f - change.position.y / height).coerceIn(0f, 1f)
+                                            }
+                                        }
+                                    }
+                            ) {
+                                val cx = saturation * size.width
+                                val cy = (1f - value) * size.height
+                                drawCircle(
+                                    color = Color.Black,
+                                    radius = 9.dp.toPx(),
+                                    center = Offset(cx, cy),
+                                    style = Stroke(width = 2.dp.toPx())
+                                )
+                                drawCircle(
+                                    color = Color.White,
+                                    radius = 7.dp.toPx(),
+                                    center = Offset(cx, cy),
+                                    style = Stroke(width = 2.dp.toPx())
+                                )
+                                drawCircle(
+                                    color = currentColor,
+                                    radius = 5.dp.toPx(),
+                                    center = Offset(cx, cy)
+                                )
+                            }
+                        }
 
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    HarmoniousPaletteList.chunked(4).forEach { rowItems ->
+                        // Rainbow Hue Slider (0° - 360°)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(26.dp)
+                                .clip(RoundedCornerShape(13.dp))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color(0xFFFF0000),
+                                            Color(0xFFFFFF00),
+                                            Color(0xFF00FF00),
+                                            Color(0xFF00FFFF),
+                                            Color(0xFF0000FF),
+                                            Color(0xFFFF00FF),
+                                            Color(0xFFFF0000)
+                                        )
+                                    )
+                                )
+                        ) {
+                            Canvas(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .pointerInput(Unit) {
+                                        awaitEachGesture {
+                                            val down = awaitFirstDown(requireUnconsumed = false)
+                                            val width = size.width.toFloat().coerceAtLeast(1f)
+                                            hue = ((down.position.x / width).coerceIn(0f, 1f) * 360f).coerceIn(0f, 360f)
+                                            while (true) {
+                                                val event = awaitPointerEvent()
+                                                val change = event.changes.firstOrNull() ?: break
+                                                if (!change.pressed) break
+                                                change.consume()
+                                                hue = ((change.position.x / width).coerceIn(0f, 1f) * 360f).coerceIn(0f, 360f)
+                                            }
+                                        }
+                                    }
+                            ) {
+                                val hx = (hue / 360f).coerceIn(0f, 1f) * size.width
+                                val centerY = size.height / 2f
+                                drawCircle(
+                                    color = Color.Black,
+                                    radius = 11.dp.toPx(),
+                                    center = Offset(hx, centerY),
+                                    style = Stroke(width = 2.dp.toPx())
+                                )
+                                drawCircle(
+                                    color = Color.White,
+                                    radius = 9.dp.toPx(),
+                                    center = Offset(hx, centerY),
+                                    style = Stroke(width = 2.dp.toPx())
+                                )
+                                drawCircle(
+                                    color = hsvToColor(hue, 1f, 1f),
+                                    radius = 7.dp.toPx(),
+                                    center = Offset(hx, centerY)
+                                )
+                            }
+                        }
+
+                        // Quick Swatches
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            rowItems.forEach { item ->
+                            quickColors.forEach { qc ->
                                 Box(
                                     modifier = Modifier
-                                        .weight(1f)
-                                        .height(36.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(item.color)
-                                        .border(
-                                            width = if (selectedItem == item) 2.5.dp else 0.5.dp,
-                                            color = if (selectedItem == item) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.3f),
-                                            shape = RoundedCornerShape(8.dp)
-                                        )
-                                        .clickable { selectedItem = item },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (selectedItem == item) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(10.dp)
-                                                .clip(CircleShape)
-                                                .background(Color.White)
-                                        )
+                                        .size(20.dp)
+                                        .clip(CircleShape)
+                                        .background(qc)
+                                        .border(0.8.dp, Color.Gray.copy(alpha = 0.4f), CircleShape)
+                                        .clickable {
+                                            val hsv = colorToHsv(qc)
+                                            hue = hsv[0]
+                                            saturation = hsv[1]
+                                            value = hsv[2]
+                                        }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // MODE 1: EXPANDED PRESET GRID
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        HarmoniousPaletteList.chunked(4).forEach { rowItems ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                rowItems.forEach { item ->
+                                    val isSelected = currentHex.equals(item.hexString, ignoreCase = true)
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(38.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(item.color)
+                                            .border(
+                                                width = if (isSelected) 2.5.dp else 0.5.dp,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.35f),
+                                                shape = RoundedCornerShape(8.dp)
+                                            )
+                                            .clickable {
+                                                selectedPresetItem = item
+                                                val hsv = colorToHsv(item.color)
+                                                hue = hsv[0]
+                                                saturation = hsv[1]
+                                                value = hsv[2]
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isSelected) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(10.dp)
+                                                    .clip(CircleShape)
+                                                    .background(if ((item.color.red * 0.299f + item.color.green * 0.587f + item.color.blue * 0.114f) > 0.5f) Color.Black else Color.White)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1857,7 +2161,11 @@ fun ColorPaletteDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onColorSelected(selectedItem) }) {
+            Button(
+                onClick = {
+                    onColorSelected(PaletteColorItem(currentColor, "Custom", currentHex))
+                }
+            ) {
                 Text("Chọn")
             }
         },
@@ -1867,6 +2175,84 @@ fun ColorPaletteDialog(
             }
         }
     )
+}
+
+@Composable
+fun ColorSettingRow(
+    title: String,
+    currentColorHex: String,
+    onClick: () -> Unit
+) {
+    val parsedColor = remember(currentColorHex) {
+        try {
+            Color(android.graphics.Color.parseColor(currentColorHex))
+        } catch (_: Exception) {
+            when (currentColorHex) {
+                "blue" -> Color(0xFF2962FF)
+                "cyan" -> Color(0xFF00E5FF)
+                "red" -> Color(0xFFFF3D00)
+                "green" -> Color(0xFF00E676)
+                "orange" -> Color(0xFFFF9100)
+                "pink" -> Color(0xFFFF4081)
+                "purple" -> Color(0xFF7C4DFF)
+                else -> Color(0xFF2962FF)
+            }
+        }
+    }
+
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = if (currentColorHex.startsWith("#")) currentColorHex.uppercase() else currentColorHex,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(parsedColor)
+                        .border(1.dp, Color.White.copy(alpha = 0.6f), CircleShape)
+                )
+                Text(
+                    text = "Đổi màu",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -1969,14 +2355,11 @@ fun SettingsPresetTab(
                 var showChargingPalette by remember { mutableStateOf(false) }
                 var showChargingRingPalette by remember { mutableStateOf(false) }
 
-                Text(text = if (isEnglish) "Headset Pop-up Color" else "Màu sắc Pop-up Tai nghe", fontWeight = FontWeight.Medium, fontSize = 13.sp, maxLines = 1)
-                Button(
-                    onClick = { showHeadsetPalette = true },
-                    modifier = Modifier.fillMaxWidth().height(38.dp),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(text = if (isEnglish) "Select color from palette" else "Chọn màu bằng bảng màu", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
+                ColorSettingRow(
+                    title = if (isEnglish) "Headset Pop-up Color" else "Màu sắc Pop-up Tai nghe",
+                    currentColorHex = headsetColor,
+                    onClick = { showHeadsetPalette = true }
+                )
 
                 if (showHeadsetPalette) {
                     val initial = try {
@@ -1995,15 +2378,11 @@ fun SettingsPresetTab(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(text = if (isEnglish) "Charging Pop-up Color" else "Màu sắc Pop-up Sạc pin", fontWeight = FontWeight.Medium, fontSize = 13.sp, maxLines = 1)
-                Button(
-                    onClick = { showChargingPalette = true },
-                    modifier = Modifier.fillMaxWidth().height(38.dp),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(text = if (isEnglish) "Select color from palette" else "Chọn màu bằng bảng màu", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
+                ColorSettingRow(
+                    title = if (isEnglish) "Charging Pop-up Color" else "Màu sắc Pop-up Sạc pin",
+                    currentColorHex = chargingColor,
+                    onClick = { showChargingPalette = true }
+                )
 
                 if (showChargingPalette) {
                     val initial = try {
@@ -2022,15 +2401,11 @@ fun SettingsPresetTab(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(text = if (isEnglish) "Charging Ring & Particles" else "Màu vòng tròn & Hiệu ứng sạc", fontWeight = FontWeight.Medium, fontSize = 13.sp, maxLines = 1)
-                Button(
-                    onClick = { showChargingRingPalette = true },
-                    modifier = Modifier.fillMaxWidth().height(38.dp),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(text = if (isEnglish) "Select ring color from palette" else "Chọn màu vòng sạc bằng bảng màu", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
+                ColorSettingRow(
+                    title = if (isEnglish) "Charging Ring & Particles" else "Màu vòng tròn & Hiệu ứng sạc",
+                    currentColorHex = chargingRingColor,
+                    onClick = { showChargingRingPalette = true }
+                )
 
                 if (showChargingRingPalette) {
                     val initial = try {
@@ -2073,14 +2448,11 @@ fun SettingsPresetTab(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
-                Button(
-                    onClick = { showBgPalette = true },
-                    modifier = Modifier.fillMaxWidth().height(38.dp),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(text = if (isEnglish) "Select background color from palette" else "Chọn màu bằng bảng màu", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
+                ColorSettingRow(
+                    title = if (isEnglish) "Custom Background Color" else "Màu nền tùy chỉnh",
+                    currentColorHex = if (customBgColor.isEmpty()) "#1E1E2C" else customBgColor,
+                    onClick = { showBgPalette = true }
+                )
 
                 if (showBgPalette) {
                     val initial = try {
