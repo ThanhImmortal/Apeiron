@@ -15,7 +15,7 @@ Apeiron is an open-source Android application that displays smooth animated over
 ### Audio Connection Pop-up
 Automatically detects and displays animated pop-up widgets when plugging in headphones or connecting audio accessories.
 
-### Charging Overlay
+### Charging Pop-up
 Dynamic overlay feedback when connecting or disconnecting power sources.
 
 ### Performance-Oriented
