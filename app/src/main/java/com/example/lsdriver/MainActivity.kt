@@ -1311,21 +1311,7 @@ fun ChargingMediaTab(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(3.dp))
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = Color(0x33FFFFFF),
-                    border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f))
-                ) {
-                    Text(
-                        text = tr(appLanguage, "⚡ Siêu sạc nhanh • Còn ~25p đầy", "⚡ Super Fast • ~25m to full", "⚡ 超级闪充 • 约 25 分钟充满"),
-                        color = Color.White,
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(0.95f),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
