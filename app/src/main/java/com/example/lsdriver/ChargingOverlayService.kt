@@ -34,6 +34,8 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
@@ -204,10 +206,27 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
 
             val wattage = calculatedWattage.coerceIn(5.0f, 65.0f)
 
-            return BatteryInfo(batteryPct, wattage, temperatureC, voltageV)
+            val remainingMs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                try {
+                    batteryManager.computeChargeTimeRemaining()
+                } catch (_: Exception) { -1L }
+            } else -1L
+
+            val estimatedMinutes = if (remainingMs > 0L) {
+                (remainingMs / 60_000L).coerceIn(1L, 300L)
+            } else if (batteryPct in 1..99 && wattage > 3.0f) {
+                val remainingPct = 100 - batteryPct
+                val energyNeededWh = (remainingPct / 100f) * 17.1f
+                val hours = energyNeededWh / wattage
+                (hours * 60f).toLong().coerceIn(5L, 180L)
+            } else {
+                null
+            }
+
+            return BatteryInfo(batteryPct, wattage, temperatureC, voltageV, estimatedMinutes)
         } catch (e: Exception) {
             e.printStackTrace()
-            return BatteryInfo(50, 18.0f, 30.0f, 4.1f)
+            return BatteryInfo(50, 18.0f, 30.0f, 4.1f, 35L)
         }
     }
 
@@ -215,12 +234,20 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
         val percent: Int,
         val wattage: Float,
         val temperature: Float,
-        val voltage: Float
+        val voltage: Float,
+        val estimatedMinutesToFull: Long? = null
     )
 
     fun showOverlay() {
         val appPrefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-        val appLanguage = appPrefs.getString("app_language", "vi") ?: "vi"
+        val appLanguage = appPrefs.getString("app_language", null) ?: run {
+            val devLang = java.util.Locale.getDefault().language.lowercase()
+            when {
+                devLang.startsWith("vi") -> "vi"
+                devLang.startsWith("zh") -> "zh"
+                else -> "en"
+            }
+        }
         val isEnglish = appLanguage == "en"
 
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -239,6 +266,7 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
             rawMediaUri
         }
         val isChargingVideoGlobal = prefs.getString("custom_media_type", "image") == "video" || customMediaUri.lowercase().let { it.endsWith(".mp4") || it.contains("video") || it.endsWith(".mkv") || it.endsWith(".mov") || it.endsWith(".webm") }
+        val popupPosition = appPrefs.getString("popup_position", "bottom") ?: "bottom"
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
@@ -264,7 +292,15 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                     WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = if (isLandscape) Gravity.START or Gravity.CENTER_VERTICAL else Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            gravity = if (isLandscape) {
+                Gravity.START or Gravity.CENTER_VERTICAL
+            } else {
+                when (popupPosition) {
+                    "top" -> Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    "center" -> Gravity.CENTER
+                    else -> Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                }
+            }
             x = if (isLandscape) (12 * density).toInt() else 0
             y = 0
             val enableBlurScrim = appPrefs.getBoolean("enable_blur_scrim", false)
@@ -454,7 +490,7 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                             exoPlayer?.stop()
                             exoPlayer?.release()
                         } catch (_: Exception) {}
-                        removeOverlay()
+                        removeOverlay(stopService = true)
                     }
                 }
 
@@ -530,13 +566,29 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
 
                 val emphasizedDecelerate = CubicBezierEasing(0.0f, 1.0f, 0.15f, 1.0f)
                 val emphasizedAccelerate = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
-                val cardShape = if (isLandscape) RoundedCornerShape(20.dp) else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                val cardShape = if (isLandscape) {
+                    RoundedCornerShape(20.dp)
+                } else {
+                    when (popupPosition) {
+                        "top" -> RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                        "center" -> RoundedCornerShape(24.dp)
+                        else -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                    }
+                }
 
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .then(if (isLandscape) Modifier.graphicsLayer { rotationZ = 90f } else Modifier),
-                    contentAlignment = if (isLandscape) Alignment.CenterStart else Alignment.BottomCenter
+                    contentAlignment = if (isLandscape) {
+                        Alignment.CenterStart
+                    } else {
+                        when (popupPosition) {
+                            "top" -> Alignment.TopCenter
+                            "center" -> Alignment.Center
+                            else -> Alignment.BottomCenter
+                        }
+                    }
                 ) {
                     AnimatedVisibility(
                         visible = visible,
@@ -546,10 +598,20 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                 animationSpec = tween(durationMillis = 450, easing = emphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
                         } else {
-                            slideInVertically(
+                            when (popupPosition) {
+                                "top" -> slideInVertically(
+                                    initialOffsetY = { -it },
+                                    animationSpec = tween(durationMillis = 460, easing = emphasizedDecelerate)
+                                ) + fadeIn(animationSpec = tween(durationMillis = 250, easing = LinearOutSlowInEasing))
+                                "center" -> scaleIn(
+                                    initialScale = 0.88f,
+                                    animationSpec = tween(durationMillis = 420, easing = emphasizedDecelerate)
+                                ) + fadeIn(animationSpec = tween(durationMillis = 250, easing = LinearOutSlowInEasing))
+                                else -> slideInVertically(
                                 initialOffsetY = { it },
                                 animationSpec = tween(durationMillis = 460, easing = emphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
+                            }
                         },
                         exit = fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutLinearInEasing))
                     ) {
@@ -586,7 +648,7 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                             exoPlayer?.stop()
                                                             exoPlayer?.release()
                                                         } catch (_: Exception) {}
-                                                        removeOverlay()
+                                                        removeOverlay(stopService = true)
                                                     }
                                                 } else {
                                                     coroutineScope.launch {
@@ -624,19 +686,25 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                 val currentOffset = dragOffsetY.value
                                                 val threshold = popupHeight * density * 0.10f
 
-                                                if (currentOffset > threshold || currentVelocity > 250f) {
+                                                val isDismissTriggered = when (popupPosition) {
+                                                    "top" -> currentOffset < -threshold || currentVelocity < -250f
+                                                    "center" -> kotlin.math.abs(currentOffset) > threshold || kotlin.math.abs(currentVelocity) > 250f
+                                                    else -> currentOffset > threshold || currentVelocity > 250f
+                                                }
+
+                                                if (isDismissTriggered) {
 
                                                     handler.removeCallbacks(dismissRunnable)
                                                     coroutineScope.launch {
                                                         dragOffsetY.animateTo(
-                                                            targetValue = popupHeight * density * 1.2f,
+                                                            targetValue = if (popupPosition == "top") -popupHeight * density * 1.2f else popupHeight * density * 1.2f,
                                                             animationSpec = tween(durationMillis = 200, easing = emphasizedAccelerate)
                                                         )
                                                         try {
                                                             exoPlayer?.stop()
                                                             exoPlayer?.release()
                                                         } catch (_: Exception) {}
-                                                        removeOverlay()
+                                                        removeOverlay(stopService = true)
                                                     }
                                                 } else {
                                                     coroutineScope.launch {
@@ -655,10 +723,10 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                 change.consume()
                                                 coroutineScope.launch {
                                                     val current = dragOffsetY.value
-                                                    val newOffset = if (current + dragAmount < 0f) {
-                                                        current + (dragAmount * 0.22f)
-                                                    } else {
-                                                        current + dragAmount
+                                                    val newOffset = when (popupPosition) {
+                                                        "top" -> if (current + dragAmount > 0f) current + (dragAmount * 0.22f) else current + dragAmount
+                                                        "bottom" -> if (current + dragAmount < 0f) current + (dragAmount * 0.22f) else current + dragAmount
+                                                        else -> current + dragAmount
                                                     }
                                                     dragOffsetY.snapTo(newOffset)
                                                 }
@@ -809,10 +877,20 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                             AnimatedVisibility(
                                 visible = showUi,
                                 enter = fadeIn(animationSpec = tween(350, easing = LinearOutSlowInEasing)) +
-                                        slideInVertically(
-                                            initialOffsetY = { it / 2 },
-                                            animationSpec = tween(350, easing = emphasizedDecelerate)
-                                        ),
+                                        when (popupPosition) {
+                                            "top" -> slideInVertically(
+                                                initialOffsetY = { -it },
+                                                animationSpec = tween(durationMillis = 460, easing = emphasizedDecelerate)
+                                            ) + fadeIn(animationSpec = tween(durationMillis = 250, easing = LinearOutSlowInEasing))
+                                            "center" -> scaleIn(
+                                                initialScale = 0.88f,
+                                                animationSpec = tween(durationMillis = 420, easing = emphasizedDecelerate)
+                                            ) + fadeIn(animationSpec = tween(durationMillis = 250, easing = LinearOutSlowInEasing))
+                                            else -> slideInVertically(
+                                                initialOffsetY = { it / 2 },
+                                                animationSpec = tween(350, easing = emphasizedDecelerate)
+                                            )
+                                        },
                                 exit = fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing)),
                                 modifier = Modifier.fillMaxSize()
                             ) {
@@ -880,6 +958,56 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                     softWrap = false
                                                 )
                                             }
+
+                                            val techBadgeText = when {
+                                                batteryInfo.wattage >= 33.0f -> when (appLanguage) {
+                                                    "zh" -> "⚡ 超级闪充"
+                                                    "en" -> "⚡ Super Fast"
+                                                    else -> "⚡ Siêu sạc nhanh"
+                                                }
+                                                batteryInfo.wattage >= 15.0f -> when (appLanguage) {
+                                                    "zh" -> "⚡ 快速充电"
+                                                    "en" -> "⚡ Fast Charging"
+                                                    else -> "⚡ Sạc nhanh"
+                                                }
+                                                else -> when (appLanguage) {
+                                                    "zh" -> "🔋 普通充电"
+                                                    "en" -> "🔋 Standard Charging"
+                                                    else -> "🔋 Sạc tiêu chuẩn"
+                                                }
+                                            }
+
+                                            val estMinutes = batteryInfo.estimatedMinutesToFull
+                                            val timeText = if (batteryInfo.percent >= 100) {
+                                                when (appLanguage) {
+                                                    "zh" -> "已充满"
+                                                    "en" -> "Fully Charged"
+                                                    else -> "Đã đầy pin"
+                                                }
+                                            } else if (estMinutes != null && estMinutes > 0) {
+                                                when (appLanguage) {
+                                                    "zh" -> "约 ${estMinutes} 分钟充满"
+                                                    "en" -> "~${estMinutes}m to full"
+                                                    else -> "Còn ~${estMinutes}p đầy"
+                                                }
+                                            } else null
+
+                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                            Surface(
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = Color(0x33FFFFFF),
+                                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+                                            ) {
+                                                Text(
+                                                    text = "$techBadgeText${if (timeText != null) " • $timeText" else ""}",
+                                                    color = Color.White,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontFamily = FontFamily.SansSerif,
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                                                )
+                                            }
                                         }
                                     }
 
@@ -892,7 +1020,7 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                         Button(
                                             onClick = {
                                                 handler.removeCallbacks(dismissRunnable)
-                                                removeOverlay()
+                                                removeOverlay(stopService = true)
                                                 val intent = Intent(context, MainActivity::class.java).apply {
                                                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                                 }
@@ -966,7 +1094,7 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
         }
     }
 
-    private fun removeOverlay() {
+    private fun removeOverlay(stopService: Boolean = false) {
         try {
             currentExoPlayer?.stop()
             currentExoPlayer?.release()
@@ -981,6 +1109,17 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                 } catch (_: Exception) {}
             }
             overlayView = null
+        }
+        if (stopService) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
+            } catch (_: Exception) {}
+            stopSelf()
         }
     }
 

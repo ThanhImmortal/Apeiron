@@ -169,7 +169,19 @@ fun MainScreen(onThemeChanged: (String) -> Unit) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     var appLanguage by remember {
-        mutableStateOf(prefs.getString("app_language", "vi") ?: "vi")
+        val initialLang = if (prefs.contains("app_language")) {
+            prefs.getString("app_language", "en") ?: "en"
+        } else {
+            val sysLang = java.util.Locale.getDefault().language.lowercase()
+            val detected = when {
+                sysLang.startsWith("vi") -> "vi"
+                sysLang.startsWith("zh") -> "zh"
+                else -> "en"
+            }
+            prefs.edit().putString("app_language", detected).apply()
+            detected
+        }
+        mutableStateOf(initialLang)
     }
     val isEnglish = appLanguage == "en"
     var presetLoadKey by remember { mutableIntStateOf(0) }
@@ -1299,7 +1311,21 @@ fun ChargingMediaTab(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(3.dp))
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0x33FFFFFF),
+                    border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f))
+                ) {
+                    Text(
+                        text = tr(appLanguage, "⚡ Siêu sạc nhanh • Còn ~25p đầy", "⚡ Super Fast • ~25m to full", "⚡ 超级闪充 • 约 25 分钟充满"),
+                        color = Color.White,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(0.95f),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -2723,6 +2749,43 @@ fun SettingsPresetTab(
                         modifier = Modifier.graphicsLayer { scaleX = 0.85f; scaleY = 0.85f }
                     )
                 }
+
+                var popupPosition by remember(refreshKey) { mutableStateOf(prefs.getString("popup_position", "bottom") ?: "bottom") }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = tr(appLanguage, "Vị trí hiển thị Pop-up", "Pop-up Position", "弹窗显示位置"), fontSize = 13.sp, maxLines = 1)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(
+                            Pair("bottom", tr(appLanguage, "Đáy", "Bottom", "底部")),
+                            Pair("center", tr(appLanguage, "Giữa", "Center", "居中")),
+                            Pair("top", tr(appLanguage, "Đỉnh", "Top", "顶部"))
+                        ).forEach { (posKey, posLabel) ->
+                            val isSelected = popupPosition == posKey
+                            OutlinedButton(
+                                onClick = {
+                                    popupPosition = posKey
+                                    prefs.edit().putString("popup_position", posKey).apply()
+                                },
+                                modifier = Modifier.height(28.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                ),
+                                border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.4f)),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(text = posLabel, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -2786,6 +2849,7 @@ fun SettingsPresetTab(
                                         .putInt("preset_${slot}_card_width", prefs.getInt("popup_card_width", 0))
                                         .putString("preset_${slot}_bg_style", prefs.getString("popup_bg_style", "default") ?: "default")
                                         .putString("preset_${slot}_bg_color", prefs.getString("popup_bg_color", "") ?: "")
+                                        .putString("preset_${slot}_popup_position", prefs.getString("popup_position", "bottom") ?: "bottom")
                                         .apply()
 
                                     chargingPrefs.edit()
@@ -2848,6 +2912,7 @@ fun SettingsPresetTab(
                                         val savedCardWidth = prefs.getInt("preset_${slot}_card_width", 0)
                                         val savedBgStyle = prefs.getString("preset_${slot}_bg_style", "default") ?: "default"
                                         val savedBgColor = prefs.getString("preset_${slot}_bg_color", "") ?: ""
+                                        val savedPosition = prefs.getString("preset_${slot}_popup_position", "bottom") ?: "bottom"
 
                                         prefs.edit()
                                             .putString("custom_media_uri", newHeadsetUri)
@@ -2865,6 +2930,7 @@ fun SettingsPresetTab(
                                             .putInt("popup_card_width", savedCardWidth)
                                             .putString("popup_bg_style", savedBgStyle)
                                             .putString("popup_bg_color", savedBgColor)
+                                            .putString("popup_position", savedPosition)
                                             .apply()
 
                                         val cFilePath = chargingPrefs.getString("preset_${slot}_charging_file", "") ?: ""
@@ -2954,6 +3020,7 @@ fun SettingsPresetTab(
                                             .remove("preset_${slot}_card_width")
                                             .remove("preset_${slot}_bg_style")
                                             .remove("preset_${slot}_bg_color")
+                                            .remove("preset_${slot}_popup_position")
                                             .apply()
 
                                         chargingPrefs.edit()

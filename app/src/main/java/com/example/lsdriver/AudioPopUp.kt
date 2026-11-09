@@ -280,7 +280,14 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
         val enableHeadset = prefs.getBoolean("enable_headset_popup", true)
         if (!enableHeadset) return
 
-        val appLanguage = prefs.getString("app_language", "vi") ?: "vi"
+        val appLanguage = prefs.getString("app_language", null) ?: run {
+            val devLang = java.util.Locale.getDefault().language.lowercase()
+            when {
+                devLang.startsWith("vi") -> "vi"
+                devLang.startsWith("zh") -> "zh"
+                else -> "en"
+            }
+        }
         val isEnglish = appLanguage == "en"
 
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -303,6 +310,7 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
         val isMediaVideoGlobal = prefs.getString("custom_media_type", "image") == "video" || customMediaUri.lowercase().let { it.endsWith(".mp4") || it.contains("video") || it.endsWith(".mkv") || it.endsWith(".mov") || it.endsWith(".webm") }
         val enableBlurScrim = prefs.getBoolean("enable_blur_scrim", false)
+        val popupPosition = prefs.getString("popup_position", "bottom") ?: "bottom"
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
@@ -328,7 +336,15 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                     WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = if (isLandscape) Gravity.START or Gravity.CENTER_VERTICAL else Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            gravity = if (isLandscape) {
+                Gravity.START or Gravity.CENTER_VERTICAL
+            } else {
+                when (popupPosition) {
+                    "top" -> Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    "center" -> Gravity.CENTER
+                    else -> Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                }
+            }
             x = if (isLandscape) (12 * density).toInt() else 0
             y = 0
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && enableBlurScrim && !isMediaVideoGlobal) {
@@ -590,11 +606,27 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
                 val emphasizedDecelerate = CubicBezierEasing(0.0f, 1.0f, 0.15f, 1.0f)
                 val emphasizedAccelerate = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
-                val cardShape = if (isLandscape) RoundedCornerShape(20.dp) else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                val cardShape = if (isLandscape) {
+                    RoundedCornerShape(20.dp)
+                } else {
+                    when (popupPosition) {
+                        "top" -> RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                        "center" -> RoundedCornerShape(24.dp)
+                        else -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                    }
+                }
 
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = if (isLandscape) Alignment.CenterStart else Alignment.BottomCenter
+                    contentAlignment = if (isLandscape) {
+                        Alignment.CenterStart
+                    } else {
+                        when (popupPosition) {
+                            "top" -> Alignment.TopCenter
+                            "center" -> Alignment.Center
+                            else -> Alignment.BottomCenter
+                        }
+                    }
                 ) {
                     AnimatedVisibility(
                         visible = visible,
@@ -604,10 +636,20 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                 animationSpec = tween(durationMillis = 450, easing = emphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
                         } else {
-                            slideInVertically(
+                            when (popupPosition) {
+                                "top" -> slideInVertically(
+                                    initialOffsetY = { -it },
+                                    animationSpec = tween(durationMillis = 460, easing = emphasizedDecelerate)
+                                ) + fadeIn(animationSpec = tween(durationMillis = 250, easing = LinearOutSlowInEasing))
+                                "center" -> scaleIn(
+                                    initialScale = 0.88f,
+                                    animationSpec = tween(durationMillis = 420, easing = emphasizedDecelerate)
+                                ) + fadeIn(animationSpec = tween(durationMillis = 250, easing = LinearOutSlowInEasing))
+                                else -> slideInVertically(
                                 initialOffsetY = { it },
                                 animationSpec = tween(durationMillis = 460, easing = emphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
+                            }
                         },
                         exit = fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutLinearInEasing))
                     ) {
@@ -679,12 +721,18 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                 val currentOffset = dragOffsetY.value
                                                 val threshold = popupHeight * density * 0.10f
 
-                                                if (currentOffset > threshold || currentVelocity > 250f) {
+                                                val isDismissTriggered = when (popupPosition) {
+                                                    "top" -> currentOffset < -threshold || currentVelocity < -250f
+                                                    "center" -> kotlin.math.abs(currentOffset) > threshold || kotlin.math.abs(currentVelocity) > 250f
+                                                    else -> currentOffset > threshold || currentVelocity > 250f
+                                                }
+
+                                                if (isDismissTriggered) {
 
                                                     mainHandler.removeCallbacks(dismissRunnable)
                                                     coroutineScope.launch {
                                                         dragOffsetY.animateTo(
-                                                            targetValue = popupHeight * density * 1.2f,
+                                                            targetValue = if (popupPosition == "top") -popupHeight * density * 1.2f else popupHeight * density * 1.2f,
                                                             animationSpec = tween(durationMillis = 200, easing = emphasizedAccelerate)
                                                         )
                                                         releasePlayer()
@@ -707,10 +755,10 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                 change.consume()
                                                 coroutineScope.launch {
                                                     val current = dragOffsetY.value
-                                                    val newOffset = if (current + dragAmount < 0f) {
-                                                        current + (dragAmount * 0.22f)
-                                                    } else {
-                                                        current + dragAmount
+                                                    val newOffset = when (popupPosition) {
+                                                        "top" -> if (current + dragAmount > 0f) current + (dragAmount * 0.22f) else current + dragAmount
+                                                        "bottom" -> if (current + dragAmount < 0f) current + (dragAmount * 0.22f) else current + dragAmount
+                                                        else -> current + dragAmount
                                                     }
                                                     dragOffsetY.snapTo(newOffset)
                                                 }
@@ -860,10 +908,20 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                             AnimatedVisibility(
                                 visible = showUi,
                                 enter = fadeIn(animationSpec = tween(350, easing = LinearOutSlowInEasing)) +
-                                        slideInVertically(
+                                        when (popupPosition) {
+                                "top" -> slideInVertically(
+                                    initialOffsetY = { -it },
+                                    animationSpec = tween(durationMillis = 460, easing = emphasizedDecelerate)
+                                ) + fadeIn(animationSpec = tween(durationMillis = 250, easing = LinearOutSlowInEasing))
+                                "center" -> scaleIn(
+                                    initialScale = 0.88f,
+                                    animationSpec = tween(durationMillis = 420, easing = emphasizedDecelerate)
+                                ) + fadeIn(animationSpec = tween(durationMillis = 250, easing = LinearOutSlowInEasing))
+                                else -> slideInVertically(
                                             initialOffsetY = { (it * 0.35f).toInt() },
                                             animationSpec = tween(350, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
-                                        ),
+                                        )
+                                },
                                 exit = fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing)),
                                 modifier = Modifier.fillMaxSize()
                             ) {
