@@ -229,6 +229,17 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
 
         removeOverlay()
 
+
+        val prefs = getSharedPreferences("charging_prefs", MODE_PRIVATE)
+        val rawMediaUri = prefs.getString("charging_media_uri", "") ?: ""
+        val customMediaUri = if (rawMediaUri.startsWith("file://") || rawMediaUri.startsWith("/")) {
+            val path = if (rawMediaUri.startsWith("file://")) Uri.parse(rawMediaUri).path ?: "" else rawMediaUri
+            if (File(path).exists()) rawMediaUri else ""
+        } else {
+            rawMediaUri
+        }
+        val isChargingVideoGlobal = prefs.getString("custom_media_type", "image") == "video" || customMediaUri.lowercase().let { it.endsWith(".mp4") || it.contains("video") || it.endsWith(".mkv") || it.endsWith(".mov") || it.endsWith(".webm") }
+
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
         val popupHeight = appPrefs.getInt("popup_card_height", 440)
@@ -256,16 +267,14 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
             gravity = if (isLandscape) Gravity.START or Gravity.CENTER_VERTICAL else Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             x = if (isLandscape) (12 * density).toInt() else 0
             y = 0
+            val enableBlurScrim = appPrefs.getBoolean("enable_blur_scrim", false)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && enableBlurScrim && !isChargingVideoGlobal) {
+                flags = flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+                setBlurBehindRadius((22 * density).toInt())
+            }
         }
 
-        val prefs = getSharedPreferences("charging_prefs", MODE_PRIVATE)
-        val rawMediaUri = prefs.getString("charging_media_uri", "") ?: ""
-        val customMediaUri = if (rawMediaUri.startsWith("file://") || rawMediaUri.startsWith("/")) {
-            val path = if (rawMediaUri.startsWith("file://")) Uri.parse(rawMediaUri).path ?: "" else rawMediaUri
-            if (File(path).exists()) rawMediaUri else ""
-        } else {
-            rawMediaUri
-        }
+
         
         val soundEnabled = prefs.getBoolean("charging_sound_enabled", false)
         val videoVolume = prefs.getFloat("charging_volume", 0.5f)
@@ -365,7 +374,7 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                 val uri = if (customMediaUri.isNotEmpty()) {
                     if (customMediaUri.startsWith("/")) Uri.fromFile(File(customMediaUri)) else Uri.parse(customMediaUri)
                 } else null
-                val isVideo = prefs.getString("custom_media_type", "image") == "video" || customMediaUri.lowercase().let { it.endsWith(".mp4") || it.contains("video") || it.endsWith(".mkv") || it.endsWith(".mov") || it.endsWith(".webm") }
+                val isVideo = isChargingVideoGlobal
 
                 // PRE-RENDER PREPARATION: Track GPU frame readiness!
                 var isVideoReady by remember { mutableStateOf(!isVideo) }
@@ -517,7 +526,9 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                 }
 
                 // Material Motion Curves (Emphasized Decelerate / Accelerate)
-                val emphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+
+
+                val emphasizedDecelerate = CubicBezierEasing(0.0f, 1.0f, 0.15f, 1.0f)
                 val emphasizedAccelerate = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
                 val cardShape = if (isLandscape) RoundedCornerShape(20.dp) else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
 
@@ -532,12 +543,12 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                         enter = if (isLandscape) {
                             slideInHorizontally(
                                 initialOffsetX = { -it },
-                                animationSpec = tween(durationMillis = 480, easing = emphasizedDecelerate)
+                                animationSpec = tween(durationMillis = 450, easing = emphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
                         } else {
                             slideInVertically(
                                 initialOffsetY = { it },
-                                animationSpec = tween(durationMillis = 500, easing = emphasizedDecelerate)
+                                animationSpec = tween(durationMillis = 460, easing = emphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
                         },
                         exit = fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutLinearInEasing))
@@ -549,6 +560,11 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                 .graphicsLayer {
                                     translationX = dragOffsetX.value
                                     translationY = dragOffsetY.value
+                                    val dragDist = if (isLandscape) (-dragOffsetX.value).coerceAtLeast(0f) else dragOffsetY.value.coerceAtLeast(0f)
+                                    val maxDrag = popupHeight * density * 0.7f
+                                    if (maxDrag > 0f && dragDist > 0f) {
+                                        alpha = (1f - (dragDist / maxDrag) * 0.4f).coerceIn(0.5f, 1f)
+                                    }
                                     clip = false
                                 }
                                 .pointerInput(Unit) {
@@ -561,7 +577,8 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                 val currentVelocity = velocityTracker.calculateVelocity().x
                                                 val currentOffset = dragOffsetX.value
 
-                                                if (currentOffset < -100f || currentVelocity < -350f) {
+                                                if (currentOffset < -80f || currentVelocity < -300f) {
+
                                                     handler.removeCallbacks(dismissRunnable)
                                                     coroutineScope.launch {
                                                         dragOffsetX.animateTo(-popupHeight * density, tween(200, easing = emphasizedAccelerate))
@@ -587,7 +604,12 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                 velocityTracker.addPosition(change.uptimeMillis, change.position)
                                                 change.consume()
                                                 coroutineScope.launch {
-                                                    val newOffset = (dragOffsetX.value + dragAmount).coerceAtMost(0f)
+                                                    val current = dragOffsetX.value
+                                                    val newOffset = if (current + dragAmount > 0f) {
+                                                        current + (dragAmount * 0.22f)
+                                                    } else {
+                                                        current + dragAmount
+                                                    }
                                                     dragOffsetX.snapTo(newOffset)
                                                 }
                                             }
@@ -602,7 +624,8 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                 val currentOffset = dragOffsetY.value
                                                 val threshold = popupHeight * density * 0.10f
 
-                                                if (currentOffset > threshold || currentVelocity > 225f) {
+                                                if (currentOffset > threshold || currentVelocity > 250f) {
+
                                                     handler.removeCallbacks(dismissRunnable)
                                                     coroutineScope.launch {
                                                         dragOffsetY.animateTo(
@@ -631,7 +654,13 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                                 velocityTracker.addPosition(change.uptimeMillis, change.position)
                                                 change.consume()
                                                 coroutineScope.launch {
-                                                    dragOffsetY.snapTo((dragOffsetY.value + dragAmount).coerceAtLeast(0f))
+                                                    val current = dragOffsetY.value
+                                                    val newOffset = if (current + dragAmount < 0f) {
+                                                        current + (dragAmount * 0.22f)
+                                                    } else {
+                                                        current + dragAmount
+                                                    }
+                                                    dragOffsetY.snapTo(newOffset)
                                                 }
                                             }
                                         )
@@ -895,6 +924,7 @@ class ChargingOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwne
                                         Button(
                                             onClick = {
                                                 handler.removeCallbacks(dismissRunnable)
+
                                                 dismissWithAnimation()
                                             },
                                             modifier = Modifier

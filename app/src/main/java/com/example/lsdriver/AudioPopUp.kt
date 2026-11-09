@@ -301,6 +301,9 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
             releasePlayer()
         }
 
+        val isMediaVideoGlobal = prefs.getString("custom_media_type", "image") == "video" || customMediaUri.lowercase().let { it.endsWith(".mp4") || it.contains("video") || it.endsWith(".mkv") || it.endsWith(".mov") || it.endsWith(".webm") }
+        val enableBlurScrim = prefs.getBoolean("enable_blur_scrim", false)
+
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
         val popupHeight = prefs.getInt("popup_card_height", 440)
@@ -328,6 +331,10 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
             gravity = if (isLandscape) Gravity.START or Gravity.CENTER_VERTICAL else Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             x = if (isLandscape) (12 * density).toInt() else 0
             y = 0
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && enableBlurScrim && !isMediaVideoGlobal) {
+                flags = flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND
+                setBlurBehindRadius((22 * density).toInt())
+            }
         }
 
         val customSavedName = prefs.getString("device_custom_name", "Audio USB") ?: "Audio USB"
@@ -416,7 +423,7 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
             if (customMediaUri.startsWith("/")) Uri.fromFile(File(customMediaUri)) else Uri.parse(customMediaUri)
         } else null
 
-        val isVideo = prefs.getString("custom_media_type", "image") == "video" || customMediaUri.lowercase().let { it.endsWith(".mp4") || it.contains("video") || it.endsWith(".mkv") || it.endsWith(".mov") || it.endsWith(".webm") }
+        val isVideo = isMediaVideoGlobal
 
         val composeView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@AudioPopUp)
@@ -579,7 +586,9 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                 }
 
                 // Material Motion Curves (Emphasized Decelerate / Accelerate)
-                val emphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+
+
+                val emphasizedDecelerate = CubicBezierEasing(0.0f, 1.0f, 0.15f, 1.0f)
                 val emphasizedAccelerate = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
                 val cardShape = if (isLandscape) RoundedCornerShape(20.dp) else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
 
@@ -592,12 +601,12 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                         enter = if (isLandscape) {
                             slideInHorizontally(
                                 initialOffsetX = { -it },
-                                animationSpec = tween(durationMillis = 480, easing = emphasizedDecelerate)
+                                animationSpec = tween(durationMillis = 450, easing = emphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
                         } else {
                             slideInVertically(
                                 initialOffsetY = { it },
-                                animationSpec = tween(durationMillis = 500, easing = emphasizedDecelerate)
+                                animationSpec = tween(durationMillis = 460, easing = emphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
                         },
                         exit = fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutLinearInEasing))
@@ -609,6 +618,11 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                 .graphicsLayer {
                                     translationX = dragOffsetX.value
                                     translationY = dragOffsetY.value
+                                    val dragDist = if (isLandscape) (-dragOffsetX.value).coerceAtLeast(0f) else dragOffsetY.value.coerceAtLeast(0f)
+                                    val maxDrag = popupHeight * density * 0.7f
+                                    if (maxDrag > 0f && dragDist > 0f) {
+                                        alpha = (1f - (dragDist / maxDrag) * 0.4f).coerceIn(0.5f, 1f)
+                                    }
                                     clip = false
                                 }
                                 .pointerInput(Unit) {
@@ -621,7 +635,8 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                 val currentVelocity = velocityTracker.calculateVelocity().x
                                                 val currentOffset = dragOffsetX.value
 
-                                                if (currentOffset < -100f || currentVelocity < -350f) {
+                                                if (currentOffset < -80f || currentVelocity < -300f) {
+
                                                     mainHandler.removeCallbacks(dismissRunnable)
                                                     coroutineScope.launch {
                                                         dragOffsetX.animateTo(-popupHeight * density, tween(200, easing = emphasizedAccelerate))
@@ -644,7 +659,12 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                 velocityTracker.addPosition(change.uptimeMillis, change.position)
                                                 change.consume()
                                                 coroutineScope.launch {
-                                                    val newOffset = (dragOffsetX.value + dragAmount).coerceAtMost(0f)
+                                                    val current = dragOffsetX.value
+                                                    val newOffset = if (current + dragAmount > 0f) {
+                                                        current + (dragAmount * 0.22f)
+                                                    } else {
+                                                        current + dragAmount
+                                                    }
                                                     dragOffsetX.snapTo(newOffset)
                                                 }
                                             }
@@ -659,7 +679,8 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                 val currentOffset = dragOffsetY.value
                                                 val threshold = popupHeight * density * 0.10f
 
-                                                if (currentOffset > threshold || currentVelocity > 225f) {
+                                                if (currentOffset > threshold || currentVelocity > 250f) {
+
                                                     mainHandler.removeCallbacks(dismissRunnable)
                                                     coroutineScope.launch {
                                                         dragOffsetY.animateTo(
@@ -685,7 +706,13 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                                 velocityTracker.addPosition(change.uptimeMillis, change.position)
                                                 change.consume()
                                                 coroutineScope.launch {
-                                                    dragOffsetY.snapTo((dragOffsetY.value + dragAmount).coerceAtLeast(0f))
+                                                    val current = dragOffsetY.value
+                                                    val newOffset = if (current + dragAmount < 0f) {
+                                                        current + (dragAmount * 0.22f)
+                                                    } else {
+                                                        current + dragAmount
+                                                    }
+                                                    dragOffsetY.snapTo(newOffset)
                                                 }
                                             }
                                         )
@@ -906,6 +933,7 @@ class AudioPopUp : Service(), LifecycleOwner, SavedStateRegistryOwner {
                                             Button(
                                                 onClick = {
                                                     mainHandler.removeCallbacks(dismissRunnable)
+
                                                     dismissWithAnimation()
                                                 },
                                                 modifier = Modifier

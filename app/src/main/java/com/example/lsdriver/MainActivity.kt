@@ -2703,6 +2703,26 @@ fun SettingsPresetTab(
                         modifier = Modifier.graphicsLayer { scaleX = 0.85f; scaleY = 0.85f }
                     )
                 }
+
+                var enableBlurScrim by remember { mutableStateOf(prefs.getBoolean("enable_blur_scrim", false)) }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(36.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = tr(appLanguage, "Làm mờ nền hậu cảnh (Ảnh tĩnh)", "Blur Background Scrim (Static only)", "背景虚化 (仅限静态)"), fontSize = 13.sp, maxLines = 1)
+                    Switch(
+                        checked = enableBlurScrim,
+                        onCheckedChange = {
+                            enableBlurScrim = it
+                            prefs.edit().putBoolean("enable_blur_scrim", it).apply()
+                        },
+                        modifier = Modifier.graphicsLayer { scaleX = 0.85f; scaleY = 0.85f }
+                    )
+                }
             }
         }
 
